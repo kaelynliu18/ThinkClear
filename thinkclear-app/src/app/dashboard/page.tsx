@@ -1,17 +1,16 @@
 // src/app/dashboard/page.tsx
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
 import { useUser } from "@clerk/nextjs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Home, Users, Brain, BookOpen, Settings } from "lucide-react";
+import { Users, Brain, BookOpen, Settings } from "lucide-react";
 import Link from "next/link";
 
 export default function DashboardPage() {
   const { user } = useUser();
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between bg-gradient-to-b from-[#e2f0ff] to-[#ffe5f0] p-4 text-center">
+    <div className="flex flex-col items-center bg-gradient-to-b from-[#e2f0ff] to-[#ffe5f0] p-4 pb-8 text-center">
       <div className="w-full max-w-md mt-6">
         <h1 className="text-4xl font-bold tracking-widest">THIΛK</h1>
         <p className="text-sm text-gray-600 -mt-1">
