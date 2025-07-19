@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef, FormEvent } from 'react';
+import { useState, useEffect, useRef, FormEvent } from "react";
 
 type Face = {
   relationship: string;
@@ -11,16 +11,16 @@ type FacesData = Record<string, Face>;
 export default function FacesPage() {
   const [faces, setFaces] = useState<FacesData>({});
   const [showModal, setShowModal] = useState(false);
-  const [name, setName] = useState('');
-  const [relationship, setRelationship] = useState('');
+  const [name, setName] = useState("");
+  const [relationship, setRelationship] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // fetch gallery on mount or when showModal closes
   useEffect(() => {
-    fetch('/api/faces')
+    fetch("/api/faces")
       .then((res) => res.json())
       .then(setFaces)
       .catch(console.error);
@@ -28,28 +28,31 @@ export default function FacesPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     if (!name.trim() || !relationship.trim() || !file) {
-      setError('All fields are required.');
+      setError("All fields are required.");
       return;
     }
     setLoading(true);
 
     const formData = new FormData();
-    formData.append('name', name);
-    formData.append('relationship', relationship);
-    formData.append('file', file);
+    formData.append("name", name);
+    formData.append("relationship", relationship);
+    formData.append("file", file);
 
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Upload failed');
+      if (!res.ok) throw new Error(json.error || "Upload failed");
       // success → close modal and reset
       setShowModal(false);
-      setName('');
-      setRelationship('');
+      setName("");
+      setRelationship("");
       setFile(null);
-      fileInputRef.current!.value = '';
+      fileInputRef.current!.value = "";
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -58,12 +61,14 @@ export default function FacesPage() {
   };
 
   return (
-    <main className="p-6 bg-gray-50 min-h-screen">
+    <main className="p-6 pb-12 bg-gray-50">
       <h1 className="text-3xl mb-6 text-blue-700">Faces Gallery</h1>
 
       {/* Gallery grid */}
       {Object.keys(faces).length === 0 ? (
-        <p className="text-gray-600">No faces yet. Click “Add New Face” to get started.</p>
+        <p className="text-gray-600">
+          No faces yet. Click “Add New Face” to get started.
+        </p>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {Object.entries(faces).map(([person, { relationship, images }]) => (
@@ -147,7 +152,7 @@ export default function FacesPage() {
                   disabled={loading}
                   className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                 >
-                  {loading ? 'Uploading…' : 'Upload'}
+                  {loading ? "Uploading…" : "Upload"}
                 </button>
               </div>
             </form>
