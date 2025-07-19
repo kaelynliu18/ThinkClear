@@ -14,12 +14,18 @@ export default function DashboardPage() {
     <div className="min-h-screen flex flex-col items-center justify-between bg-gradient-to-b from-[#e2f0ff] to-[#ffe5f0] p-4 text-center">
       <div className="w-full max-w-md mt-6">
         <h1 className="text-4xl font-bold tracking-widest">THIΛK</h1>
-        <p className="text-sm text-gray-600 -mt-1">for every face that matters</p>
+        <p className="text-sm text-gray-600 -mt-1">
+          for every face that matters
+        </p>
 
         <Card className="mt-6">
           <CardContent className="py-6">
-            <p className="text-lg font-semibold mb-1">Welcome back, {user?.firstName}!</p>
-            <p className="text-sm text-gray-600">Glasses Connected • You last saw Maya 10 hours ago</p>
+            <p className="text-lg font-semibold mb-1">
+              Welcome back, {user?.firstName}!
+            </p>
+            <p className="text-sm text-gray-600">
+              Glasses Connected • You last saw Maya 10 hours ago
+            </p>
           </CardContent>
         </Card>
 
@@ -29,7 +35,9 @@ export default function DashboardPage() {
               <CardContent className="flex flex-col items-center p-4">
                 <Users className="h-8 w-8 mb-2" />
                 <p className="font-semibold">Familiar Faces</p>
-                <p className="text-sm text-gray-600 text-center">See recognized faces from your smart glasses.</p>
+                <p className="text-sm text-gray-600 text-center">
+                  See recognized faces from your smart glasses.
+                </p>
               </CardContent>
             </Card>
           </Link>
@@ -39,7 +47,9 @@ export default function DashboardPage() {
               <CardContent className="flex flex-col items-center p-4">
                 <Brain className="h-8 w-8 mb-2" />
                 <p className="font-semibold">Memory Game</p>
-                <p className="text-sm text-gray-600 text-center">Test memory with friendly challenges.</p>
+                <p className="text-sm text-gray-600 text-center">
+                  Test memory with friendly challenges.
+                </p>
               </CardContent>
             </Card>
           </Link>
@@ -49,7 +59,9 @@ export default function DashboardPage() {
               <CardContent className="flex flex-col items-center p-4">
                 <BookOpen className="h-8 w-8 mb-2" />
                 <p className="font-semibold">Journal</p>
-                <p className="text-sm text-gray-600 text-center">Record moments and reflections daily.</p>
+                <p className="text-sm text-gray-600 text-center">
+                  Record moments and reflections daily.
+                </p>
               </CardContent>
             </Card>
           </Link>
@@ -59,20 +71,13 @@ export default function DashboardPage() {
               <CardContent className="flex flex-col items-center p-4">
                 <Settings className="h-8 w-8 mb-2" />
                 <p className="font-semibold">Settings</p>
-                <p className="text-sm text-gray-600 text-center">Manage your preferences and app setup.</p>
+                <p className="text-sm text-gray-600 text-center">
+                  Manage your preferences and app setup.
+                </p>
               </CardContent>
             </Card>
           </Link>
         </div>
-      </div>
-
-      {/* Bottom Navigation */}
-      <div className="w-full max-w-md bg-white rounded-t-xl shadow-inner p-3 flex justify-around mt-8">
-        <Link href="/dashboard"><Home /></Link>
-        <Link href="/faces"><Users /></Link>
-        <Link href="/game"><Brain /></Link>
-        <Link href="/settings"><Settings /></Link>
-        <UserButton afterSignOutUrl="/" />
       </div>
     </div>
   );
