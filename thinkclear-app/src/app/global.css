@@ -1,0 +1,21 @@
+/* 1) Optional: your font first */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
+/* 2) Tailwind’s layers */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 3) Global reset & gradient background */
+html, body {
+  @apply min-h-screen font-sans
+         bg-gradient-to-b from-blue-100 via-white to-pink-100
+         text-gray-900;
+  margin: 0;
+  padding: 0;
+}
+
+/* 4) Make sure your <main> never hides under the footer */
+main {
+  padding-bottom: 4rem;
+}
