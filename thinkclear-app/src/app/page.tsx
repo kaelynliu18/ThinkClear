@@ -1,71 +1,12 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { Home, User, Award, BookOpen, Settings } from 'lucide-react';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function HomePage() {
   const router = useRouter();
-
-  return (
-    <main>
-      {/* Logo */}
-      <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
-        THI
-        <span
-          style={{
-            display: 'inline-block',
-            transform: 'rotate(180deg)',
-            margin: '0 0.25rem',
-          }}
-        >
-          V
-        </span>
-        K Clear
-      </h1>
-
-      {/* Motto */}
-      <p style={{ fontStyle: 'italic', marginBottom: '1rem' }}>
-        for every face that matters
-      </p>
-
-      {/* Intro */}
-      <p style={{ marginBottom: '2rem' }}>
-        Welcome to your memory companion.
-      </p>
-
-      {/* Go to Login button */}
-      <button
-        onClick={() => router.push('/login')}
-        style={{
-          padding: '0.5rem 1rem',
-          background: '#2563eb',
-          color: 'white',
-          border: 'none',
-          borderRadius: '0.25rem',
-          cursor: 'pointer',
-        }}
-      >
-        Go to Login
-      </button>
-
-      {/* Bottom Nav */}
-      <footer>
-        <button onClick={() => router.push('/')}>
-          <Home size={24} />
-        </button>
-        <button onClick={() => router.push('/faces')}>
-          <User size={24} />
-        </button>
-        <button onClick={() => router.push('/game')}>
-          <Award size={24} />
-        </button>
-        <button onClick={() => router.push('/journal')}>
-          <BookOpen size={24} />
-        </button>
-        <button onClick={() => router.push('/settings')}>
-          <Settings size={24} />
-        </button>
-      </footer>
-    </main>
-  );
+  useEffect(() => {
+    router.replace("/dashboard");
+  }, [router]);
+  return null;
 }

@@ -34,19 +34,7 @@ export default function HomePage() {
       </p>
 
       {/* Go to Login button */}
-      <button
-        onClick={() => router.push('/login')}
-        style={{
-          padding: '0.5rem 1rem',
-          background: '#2563eb',
-          color: 'white',
-          border: 'none',
-          borderRadius: '0.25rem',
-          cursor: 'pointer',
-        }}
-      >
-        Go to Login
-      </button>
+      {/* Removed login button as login is no longer used */}
 
       {/* Bottom Nav */}
       <footer>
