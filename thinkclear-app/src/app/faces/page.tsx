@@ -72,13 +72,13 @@ export default function FacesPage() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {Object.entries(faces).map(([person, { relationship, images }]) => (
-            <div key={person} className="bg-white rounded-lg shadow p-4">
+            <div key={person} className="bg-white rounded-lg shadow p-6">
               <img
                 src={`/faces-data/${images[0]}`}
                 alt={person}
-                className="w-full h-32 object-cover rounded"
+                className="w-full h-48 object-cover rounded"
               />
-              <h2 className="mt-2 font-semibold">{person}</h2>
+              <h2 className="mt-4 font-semibold text-lg">{person}</h2>
               <p className="text-sm text-gray-500">{relationship}</p>
             </div>
           ))}

@@ -5,6 +5,7 @@ import { useUser } from "@clerk/nextjs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, Brain, BookOpen, Settings } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -12,6 +13,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col items-center bg-gradient-to-b from-[#e2f0ff] to-[#ffe5f0] p-4 pb-8 text-center">
       <div className="w-full max-w-md mt-6">
+        <Image src="/think-logo.png" alt="ThinkClear Logo" width={80} height={80} className="mx-auto mb-2" />
         <h1 className="text-4xl font-bold tracking-widest">THIΛK</h1>
         <p className="text-sm text-gray-600 -mt-1">
           for every face that matters

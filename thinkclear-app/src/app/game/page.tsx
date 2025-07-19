@@ -166,35 +166,6 @@ export default function GamePage() {
           </button>
         </div>
       </div>
-
-      {/* Bottom Nav */}
-      <footer className="fixed bottom-0 left-0 w-full bg-blue-600 text-white py-2 px-6 flex justify-around">
-        <Home
-          size={24}
-          onClick={() => router.push("/dashboard")}
-          className="cursor-pointer"
-        />
-        <User
-          size={24}
-          onClick={() => router.push("/faces")}
-          className="cursor-pointer"
-        />
-        <Award
-          size={24}
-          onClick={() => router.push("/game")}
-          className="cursor-pointer"
-        />
-        <BookOpen
-          size={24}
-          onClick={() => router.push("/journal")}
-          className="cursor-pointer"
-        />
-        <Settings
-          size={24}
-          onClick={() => router.push("/settings")}
-          className="cursor-pointer"
-        />
-      </footer>
     </main>
   );
 }
