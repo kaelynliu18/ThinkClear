@@ -35,6 +35,18 @@ const objects = [
   { name: "Heart", relationship: "Symbol", img: "❤️" },
 ];
 
+// Add object descriptions
+const objectDescriptions: { [key: string]: string } = {
+  Apple: "Apples are sweet, crunchy fruits that make a great snack or pie.",
+  Book: "Books let you explore new worlds, learn, and get lost in stories.",
+  Car: "Cars help you get from place to place quickly and comfortably.",
+  Dog: "Dogs are loyal friends who love to play and keep you company.",
+  House: "A house is where you live, relax, and make memories with family.",
+  Tree: "Trees give us shade, clean air, and a place to climb or rest under.",
+  Star: "Stars light up the night sky and inspire wishes and dreams.",
+  Heart: "A heart is a symbol of love, care, and all the warm feelings inside."
+};
+
 export default function GamePage() {
   const router = useRouter();
   const [gameMode, setGameMode] = useState<GameMode | null>(null);
@@ -50,6 +62,8 @@ export default function GamePage() {
   const [roundCleared, setRoundCleared] = useState(false);
   const [madeMistake, setMadeMistake] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showObjectPopup, setShowObjectPopup] = useState(false);
+  const [objectPopupText, setObjectPopupText] = useState("");
 
   useEffect(() => {
     loadFaces();
@@ -130,7 +144,10 @@ export default function GamePage() {
     const currentItem = newRemaining[0];
     newRemaining = newRemaining.slice(1);
 
-    const options = shuffleArray(gameItems.map((p) => p.name));
+    // Get 3 random incorrect options
+    const incorrectOptions = shuffleArray(gameItems.filter((p) => p.name !== currentItem.name)).slice(0, 3);
+    // Combine with correct answer and shuffle
+    const options = shuffleArray([currentItem.name, ...incorrectOptions.map((p) => p.name)]);
 
     setRemainingItems(newRemaining);
     setCurrentItemIndex(
@@ -206,6 +223,11 @@ export default function GamePage() {
         `✅ This was ${currentItem.name}, ${currentItem.relationship}!`
       );
       setRoundCleared(true);
+      // Show popup if object
+      if (currentItem.type === 'object') {
+        setObjectPopupText(objectDescriptions[currentItem.name] || "No description available.");
+        setShowObjectPopup(true);
+      }
     } else {
       setMessage(`❌ No, this is not ${option}. Try again!`);
       setMadeMistake(true);
@@ -232,6 +254,20 @@ export default function GamePage() {
 
   return (
     <main className="bg-gradient-to-b from-blue-100 via-white to-pink-100 px-4 py-8 pb-4 flex flex-col items-center text-center min-h-screen overflow-auto">
+      {/* Object Description Popup */}
+      {showObjectPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-xs w-full text-center relative animate-fade-in">
+            <p className="text-gray-700 mb-4">{objectPopupText}</p>
+            <button
+              onClick={() => setShowObjectPopup(false)}
+              className="mt-2 px-6 py-2 bg-blue-500 text-white rounded-full font-semibold shadow hover:bg-blue-600 transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
       <div className="w-full max-w-md mx-auto">
         {loading ? (
           <div className="text-center py-12">
