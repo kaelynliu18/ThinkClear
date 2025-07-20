@@ -63,24 +63,6 @@ export default function GamePage() {
     setMadeMistake(false);
   };
 
-  const handleSelection = (option: string) => {
-    if (roundCleared) return;
-    setSelected(option);
-
-    if (option === people[currentPersonIndex].name) {
-      if (!madeMistake) {
-        setCorrectCount((prev) => prev + 1);
-      }
-      setMessage(
-        `✅ This was ${people[currentPersonIndex].name}, ${people[currentPersonIndex].relationship}!`
-      );
-      setRoundCleared(true);
-    } else {
-      setMessage(`❌ No, this is not ${option}. Try again!`);
-      setMadeMistake(true);
-    }
-  };
-
   // Save progress to localStorage when correctCount changes
   useEffect(() => {
     if (correctCount > 0) {
@@ -91,7 +73,12 @@ export default function GamePage() {
       // Find today's entry or create new one
       let todayEntry = progressData.find((entry: any) => entry.date === today);
       if (!todayEntry) {
-        todayEntry = { date: today, correctCount: 0, totalAttempts: 0 };
+        todayEntry = { 
+          date: today, 
+          correctCount: 0, 
+          totalAttempts: 0,
+          personStats: {}
+        };
         progressData.push(todayEntry);
       }
       
@@ -102,6 +89,47 @@ export default function GamePage() {
       localStorage.setItem('memory-game-progress', JSON.stringify(progressData));
     }
   }, [correctCount]);
+
+  // Save person-specific accuracy when a selection is made
+  const savePersonAccuracy = (personName: string, isCorrect: boolean) => {
+    const existingAccuracy = localStorage.getItem('person-accuracy');
+    let accuracyData = existingAccuracy ? JSON.parse(existingAccuracy) : {};
+    
+    if (!accuracyData[personName]) {
+      accuracyData[personName] = { correct: 0, total: 0 };
+    }
+    
+    accuracyData[personName].total += 1;
+    if (isCorrect) {
+      accuracyData[personName].correct += 1;
+    }
+    
+    localStorage.setItem('person-accuracy', JSON.stringify(accuracyData));
+  };
+
+  const handleSelection = (option: string) => {
+    if (roundCleared) return;
+    setSelected(option);
+
+    const currentPerson = people[currentPersonIndex];
+    const isCorrect = option === currentPerson.name;
+    
+    // Save person accuracy
+    savePersonAccuracy(currentPerson.name, isCorrect);
+
+    if (isCorrect) {
+      if (!madeMistake) {
+        setCorrectCount((prev) => prev + 1);
+      }
+      setMessage(
+        `✅ This was ${currentPerson.name}, ${currentPerson.relationship}!`
+      );
+      setRoundCleared(true);
+    } else {
+      setMessage(`❌ No, this is not ${option}. Try again!`);
+      setMadeMistake(true);
+    }
+  };
 
   const progress = Math.min((correctCount / 10) * 100, 100);
 
