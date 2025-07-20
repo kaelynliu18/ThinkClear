@@ -60,6 +60,26 @@ export default function FacesPage() {
     }
   };
 
+  const handleRemove = async (person: string) => {
+    if (!window.confirm(`Remove ${person} from gallery?`)) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/faces/${encodeURIComponent(person)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to remove face");
+      setFaces((prev) => {
+        const updated = { ...prev };
+        delete updated[person];
+        return updated;
+      });
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <main className="p-6 pb-12 bg-gray-50">
       <h1 className="text-3xl mb-6 text-blue-700">Faces Gallery</h1>
@@ -80,6 +100,13 @@ export default function FacesPage() {
               />
               <h2 className="mt-4 font-semibold text-lg">{person}</h2>
               <p className="text-sm text-gray-500">{relationship}</p>
+              <button
+                onClick={() => handleRemove(person)}
+                className="mt-3 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                disabled={loading}
+              >
+                Remove
+              </button>
             </div>
           ))}
         </div>
