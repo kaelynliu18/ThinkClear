@@ -45,3 +45,6 @@ next-env.d.ts
 venv
 .DS_Store
 .tmp
+.next/
+.DS_Store
+node_modules/
