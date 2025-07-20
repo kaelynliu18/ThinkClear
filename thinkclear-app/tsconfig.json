@@ -19,12 +19,12 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["thinkclear-app/src/*"]
     },
     /* ← ADD THESE: */
     "typeRoots": [
       "./types",
-      "./node_modules/@types"
+      "thinkclear-app/node_modules/@types"
     ]
     /* ↑ so TS picks up your heic-convert.d.ts shim first */
   },
@@ -35,5 +35,5 @@
     "**/*.tsx",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["thinkclear-app/node_modules"]
 }
