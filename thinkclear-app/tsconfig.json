@@ -19,18 +19,15 @@
       }
     ],
     "paths": {
-      "@/*": ["thinkclear-app/src/*"]
+      "@/*": ["./thinkclear-app/src/*"]
     },
     /* ← ADD THESE: */
-    "typeRoots": [
-      "./types",
-      "thinkclear-app/node_modules/@types"
-    ]
+    "typeRoots": ["./types", "thinkclear-app/node_modules/@types"]
     /* ↑ so TS picks up your heic-convert.d.ts shim first */
   },
   "include": [
     "next-env.d.ts",
-    "types/**/*.d.ts",        /* ← ensure your shim is loaded */
+    "types/**/*.d.ts" /* ← ensure your shim is loaded */,
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"
