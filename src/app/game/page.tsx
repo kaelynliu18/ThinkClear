@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { User, Award, BookOpen, Settings, Home, Users, Package, Shuffle } from "lucide-react";
-import React from "react";
 
 interface FaceData {
   relationship: string;
@@ -24,7 +23,7 @@ interface GameItem {
 
 type GameMode = 'face' | 'object' | 'mixed';
 
-// Sample objects for object mode (use emojis for guaranteed rendering)
+// Sample objects for object mode
 const objects = [
   { name: "Apple", relationship: "Fruit", img: "🍎" },
   { name: "Book", relationship: "Reading Material", img: "📚" },
@@ -35,18 +34,6 @@ const objects = [
   { name: "Star", relationship: "Celestial", img: "⭐" },
   { name: "Heart", relationship: "Symbol", img: "❤️" },
 ];
-
-// Add object descriptions
-const objectDescriptions: Record<string, string> = {
-  Apple: "An apple is a sweet fruit you can eat as a snack or in a pie.",
-  Book: "A book is for reading and learning new things.",
-  Car: "A car is how you can drive around fast.",
-  Dog: "A dog is a loyal pet and a great companion.",
-  House: "A house is where you live and feel safe.",
-  Tree: "A tree gives shade and helps us breathe fresh air.",
-  Star: "A star shines in the night sky and can guide you.",
-  Heart: "A heart is a symbol of love and care.",
-};
 
 export default function GamePage() {
   const router = useRouter();
@@ -63,8 +50,6 @@ export default function GamePage() {
   const [roundCleared, setRoundCleared] = useState(false);
   const [madeMistake, setMadeMistake] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showObjectPopup, setShowObjectPopup] = useState(false);
-  const [objectPopupText, setObjectPopupText] = useState("");
 
   useEffect(() => {
     loadFaces();
@@ -90,7 +75,11 @@ export default function GamePage() {
   };
 
   const selectMode = (mode: GameMode) => {
+    setGameMode(mode);
+    
+    // Prepare game items based on mode
     let items: GameItem[] = [];
+    
     if (mode === 'face') {
       items = people.map(p => ({ ...p, type: 'face' as const }));
     } else if (mode === 'object') {
@@ -100,14 +89,7 @@ export default function GamePage() {
       const objectItems = objects.map(o => ({ ...o, type: 'object' as const }));
       items = [...faceItems, ...objectItems];
     }
-    if (items.length < 4) {
-      setGameMode(null);
-      setGameItems([]);
-      setShuffledOptions([]);
-      setMessage('You need at least 4 items (faces or objects) to play this mode!');
-      return;
-    }
-    setGameMode(mode);
+    
     setGameItems(items);
     setRemainingItems(shuffleArray(items));
     setCorrectCount(0);
@@ -137,16 +119,19 @@ export default function GamePage() {
 
   const generateRound = () => {
     if (gameItems.length === 0) return;
+    
     let newRemaining = [...remainingItems];
+
+    // Reset list when all shown
     if (newRemaining.length === 0) {
       newRemaining = shuffleArray(gameItems);
     }
+
     const currentItem = newRemaining[0];
     newRemaining = newRemaining.slice(1);
-    // Always limit to 4 options: correct + up to 3 others
-    let otherOptions = gameItems.filter((p) => p.name !== currentItem.name);
-    otherOptions = shuffleArray(otherOptions).slice(0, 3);
-    const options = shuffleArray([currentItem.name, ...otherOptions.map(p => p.name)]).slice(0, 4);
+
+    const options = shuffleArray(gameItems.map((p) => p.name));
+
     setRemainingItems(newRemaining);
     setCurrentItemIndex(
       gameItems.findIndex((p) => p.name === currentItem.name)
@@ -221,11 +206,6 @@ export default function GamePage() {
         `✅ This was ${currentItem.name}, ${currentItem.relationship}!`
       );
       setRoundCleared(true);
-      // Show popup for objects
-      if (currentItem.type === 'object' && objectDescriptions[currentItem.name]) {
-        setObjectPopupText(objectDescriptions[currentItem.name]);
-        setShowObjectPopup(true);
-      }
     } else {
       setMessage(`❌ No, this is not ${option}. Try again!`);
       setMadeMistake(true);
@@ -260,50 +240,68 @@ export default function GamePage() {
           </div>
         ) : gameMode === null ? (
           <div className="text-center py-12">
-            <div className="bg-white/80 rounded-3xl shadow-2xl p-8">
-              <h2 className="text-2xl font-extrabold text-blue-700 mb-4">Select Game Mode</h2>
-              <p className="text-gray-600 mb-8">Choose your preferred game mode:</p>
+            <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/20">
+              <h2 className="text-3xl font-extrabold text-blue-700 mb-2 drop-shadow-lg">Select Game Mode</h2>
+              <p className="text-gray-600 mb-8 text-lg">Choose your preferred game mode:</p>
               
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <button
                   onClick={() => selectMode('face')}
                   disabled={people.length === 0}
-                  className="w-full px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl font-semibold shadow-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="group w-full relative overflow-hidden px-8 py-6 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 text-white rounded-3xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:from-blue-500 hover:via-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-xl"
                 >
-                  <Users className="w-6 h-6 mr-3" />
-                  <div className="text-left">
-                    <div className="font-bold">Face Mode</div>
-                    <div className="text-sm opacity-90">Match people from your gallery</div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                  <div className="relative flex items-center justify-center">
+                    <div className="bg-white/20 rounded-full p-3 mr-4 backdrop-blur-sm">
+                      <Users className="w-8 h-8" />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-2xl font-bold mb-1">Face Mode</div>
+                      <div className="text-blue-100 text-sm">Match people from your gallery</div>
+                    </div>
                   </div>
                 </button>
                 
                 <button
                   onClick={() => selectMode('object')}
-                  className="w-full px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl font-semibold shadow-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 transform hover:scale-105 flex items-center justify-center"
+                  className="group w-full relative overflow-hidden px-8 py-6 bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 text-white rounded-3xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:from-emerald-500 hover:via-emerald-600 hover:to-emerald-700"
                 >
-                  <Package className="w-6 h-6 mr-3" />
-                  <div className="text-left">
-                    <div className="font-bold">Object Mode</div>
-                    <div className="text-sm opacity-90">Match common objects</div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                  <div className="relative flex items-center justify-center">
+                    <div className="bg-white/20 rounded-full p-3 mr-4 backdrop-blur-sm">
+                      <Package className="w-8 h-8" />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-2xl font-bold mb-1">Object Mode</div>
+                      <div className="text-emerald-100 text-sm">Match common objects</div>
+                    </div>
                   </div>
                 </button>
                 
                 <button
                   onClick={() => selectMode('mixed')}
                   disabled={people.length === 0}
-                  className="w-full px-6 py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-2xl font-semibold shadow-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="group w-full relative overflow-hidden px-8 py-6 bg-gradient-to-br from-purple-400 via-purple-500 to-purple-600 text-white rounded-3xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:from-purple-500 hover:via-purple-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-xl"
                 >
-                  <Shuffle className="w-6 h-6 mr-3" />
-                  <div className="text-left">
-                    <div className="font-bold">Mixed Mode</div>
-                    <div className="text-sm opacity-90">Match faces and objects</div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                  <div className="relative flex items-center justify-center">
+                    <div className="bg-white/20 rounded-full p-3 mr-4 backdrop-blur-sm">
+                      <Shuffle className="w-8 h-8" />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-2xl font-bold mb-1">Mixed Mode</div>
+                      <div className="text-purple-100 text-sm">Match faces and objects</div>
+                    </div>
                   </div>
                 </button>
               </div>
               
               {people.length === 0 && (
-                <div className="mt-4 text-sm text-red-500">
-                  Add faces to your gallery to play Face Mode and Mixed Mode
+                <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-2xl">
+                  <div className="flex items-center text-red-600">
+                    <div className="w-2 h-2 bg-red-500 rounded-full mr-3 animate-pulse"></div>
+                    <span className="text-sm font-medium">Add faces to your gallery to play Face Mode and Mixed Mode</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -387,24 +385,21 @@ export default function GamePage() {
 
               {/* Options */}
               <div className="grid grid-cols-2 gap-4 mb-4 w-full">
-                {Array.isArray(shuffledOptions) && shuffledOptions.slice(0, 4).map((option, index) => {
-                  console.log('Rendering option:', option);
-                  return (
-                    <button
-                      key={`${option}-${index}`}
-                      onClick={() => handleSelection(option)}
-                      className={`px-4 py-3 rounded-xl font-semibold text-base shadow transition-all duration-200 border-2
-                        ${selected === option
-                          ? option === gameItems[currentItemIndex].name
-                            ? "bg-blue-600 text-white border-blue-700 scale-105"
-                            : "bg-red-200 text-red-700 border-red-400 scale-105"
-                          : "bg-white text-blue-700 border-blue-200 hover:bg-blue-50 hover:scale-105"}
-                      `}
-                    >
-                      {option}
-                    </button>
-                  );
-                })}
+                {shuffledOptions.map((option, index) => (
+                  <button
+                    key={`${option}-${index}`}
+                    onClick={() => handleSelection(option)}
+                    className={`px-4 py-3 rounded-xl font-semibold text-base shadow transition-all duration-200 border-2
+                      ${selected === option
+                        ? option === gameItems[currentItemIndex].name
+                          ? "bg-blue-600 text-white border-blue-700 scale-105"
+                          : "bg-red-200 text-red-700 border-red-400 scale-105"
+                        : "bg-white text-blue-700 border-blue-200 hover:bg-blue-50 hover:scale-105"}
+                    `}
+                  >
+                    {option}
+                  </button>
+                ))}
               </div>
 
               {/* Hint Display */}
@@ -440,27 +435,6 @@ export default function GamePage() {
 
       {/* Bottom Nav */}
       {/* Removed custom footer nav to use the shared layout's nav bar */}
-      {message && gameMode === null && (
-        <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-center font-semibold">
-          {message}
-        </div>
-      )}
-      {showObjectPopup && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/40">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-xs w-full text-center relative">
-            <button
-              onClick={() => setShowObjectPopup(false)}
-              className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl font-bold"
-              aria-label="Close"
-            >
-              ×
-            </button>
-            <div className="mb-4 text-4xl">{gameItems[currentItemIndex].img}</div>
-            <h3 className="text-xl font-bold mb-2">{gameItems[currentItemIndex].name}</h3>
-            <p className="text-gray-700 text-base">{objectPopupText}</p>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

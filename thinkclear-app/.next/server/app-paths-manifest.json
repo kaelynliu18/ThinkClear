@@ -1,0 +1,4 @@
+{
+  "/api/faces/route": "app/api/faces/route.js",
+  "/game/page": "app/game/page.js"
+}
