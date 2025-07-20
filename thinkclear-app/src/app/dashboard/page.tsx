@@ -1,9 +1,8 @@
-// src/app/dashboard/page.tsx
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Users, Brain, BookOpen, Settings } from "lucide-react";
+import { Card, CardContent } from "../../components/ui/card";
+import { Users, Brain, BookOpen, Settings, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -11,72 +10,47 @@ export default function DashboardPage() {
   const { user } = useUser();
 
   return (
-    <div className="flex flex-col items-center bg-gradient-to-b from-[#e2f0ff] to-[#ffe5f0] p-4 pb-8 text-center">
-      <div className="w-full max-w-md mt-6">
-        <Image src="/think-logo.png" alt="ThinkClear Logo" width={80} height={80} className="mx-auto mb-2" />
-        <h1 className="text-4xl font-bold tracking-widest">THIΛK</h1>
-        <p className="text-sm text-gray-600 -mt-1">
-          for every face that matters
-        </p>
+    <div className="min-h-screen flex flex-col items-center bg-gradient-to-b from-[#e2f0ff] to-[#ffe5f0] p-6 pb-24 text-center">
+      <div className="w-full max-w-md mt-8">
+        <div className="bg-white/80 rounded-3xl shadow-xl p-6 mb-8 flex flex-col items-center">
+          <img src="/think-logo.png" alt="ThinkClear Logo" width={140} className="mx-auto mb-4 drop-shadow-lg" />
+          <h1 className="text-4xl font-extrabold tracking-widest text-blue-700 drop-shadow mb-2">THIΛK Clear</h1>
+          <p className="text-base text-blue-500 italic mb-2">for every face that matters</p>
+          <p className="text-sm text-gray-500">Welcome back{user?.firstName ? `, ${user.firstName}` : ""}!</p>
+        </div>
 
-        <Card className="mt-6">
-          <CardContent className="py-6">
-            <p className="text-lg font-semibold mb-1">
-              Welcome back, {user?.firstName}!
-            </p>
-            <p className="text-sm text-gray-600">
-              Glasses Connected • You last saw Maya 10 hours ago
-            </p>
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-2 gap-4 mt-6">
+        {/* Cards Section */}
+        <div className="grid grid-cols-2 gap-6">
           <Link href="/faces">
-            <Card className="hover:bg-blue-100 cursor-pointer">
-              <CardContent className="flex flex-col items-center p-4">
-                <Users className="h-8 w-8 mb-2" />
-                <p className="font-semibold">Familiar Faces</p>
-                <p className="text-sm text-gray-600 text-center">
-                  See recognized faces from your smart glasses.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="bg-white/90 border border-blue-100 rounded-2xl shadow-lg p-6 flex flex-col items-center hover:scale-105 hover:shadow-2xl transition-transform cursor-pointer">
+              <Users className="h-10 w-10 mb-2 text-blue-600" />
+              <p className="font-bold text-blue-600 mb-1">Familiar Faces</p>
+              <p className="text-xs text-blue-500 text-center">See recognized faces from your smart glasses.</p>
+            </div>
           </Link>
 
           <Link href="/game">
-            <Card className="hover:bg-blue-100 cursor-pointer">
-              <CardContent className="flex flex-col items-center p-4">
-                <Brain className="h-8 w-8 mb-2" />
-                <p className="font-semibold">Memory Game</p>
-                <p className="text-sm text-gray-600 text-center">
-                  Test memory with friendly challenges.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="bg-white/90 border border-blue-100 rounded-2xl shadow-lg p-6 flex flex-col items-center hover:scale-105 hover:shadow-2xl transition-transform cursor-pointer">
+              <Brain className="h-10 w-10 mb-2 text-pink-500" />
+              <p className="font-bold text-pink-500 mb-1">Memory Game</p>
+              <p className="text-xs text-pink-400 text-center">Test memory with friendly challenges.</p>
+            </div>
           </Link>
 
           <Link href="/journal">
-            <Card className="hover:bg-blue-100 cursor-pointer">
-              <CardContent className="flex flex-col items-center p-4">
-                <BookOpen className="h-8 w-8 mb-2" />
-                <p className="font-semibold">Journal</p>
-                <p className="text-sm text-gray-600 text-center">
-                  Record moments and reflections daily.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="bg-white/90 border border-blue-100 rounded-2xl shadow-lg p-6 flex flex-col items-center hover:scale-105 hover:shadow-2xl transition-transform cursor-pointer">
+              <BookOpen className="h-10 w-10 mb-2 text-blue-400" />
+              <p className="font-bold text-blue-400 mb-1">Journal</p>
+              <p className="text-xs text-blue-400 text-center">Record moments and reflections daily.</p>
+            </div>
           </Link>
 
-          <Link href="/settings">
-            <Card className="hover:bg-blue-100 cursor-pointer">
-              <CardContent className="flex flex-col items-center p-4">
-                <Settings className="h-8 w-8 mb-2" />
-                <p className="font-semibold">Settings</p>
-                <p className="text-sm text-gray-600 text-center">
-                  Manage your preferences and app setup.
-                </p>
-              </CardContent>
-            </Card>
+          <Link href="/progress">
+            <div className="bg-white/90 border border-blue-100 rounded-2xl shadow-lg p-6 flex flex-col items-center hover:scale-105 hover:shadow-2xl transition-transform cursor-pointer">
+              <TrendingUp className="h-10 w-10 mb-2 text-green-500" />
+              <p className="font-bold text-green-600 mb-1">Progress</p>
+              <p className="text-xs text-green-500 text-center">Track your memory game performance.</p>
+            </div>
           </Link>
         </div>
       </div>
