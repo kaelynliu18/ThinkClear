@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Brain, BookOpen, Settings } from "lucide-react";
+import { Users, Brain, BookOpen, Settings, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -45,11 +45,11 @@ export default function DashboardPage() {
             </div>
           </Link>
 
-          <Link href="/settings">
+          <Link href="/progress">
             <div className="bg-white/90 border border-blue-100 rounded-2xl shadow-lg p-6 flex flex-col items-center hover:scale-105 hover:shadow-2xl transition-transform cursor-pointer">
-              <Settings className="h-10 w-10 mb-2 text-gray-500" />
-              <p className="font-bold text-gray-500 mb-1">Settings</p>
-              <p className="text-xs text-gray-400 text-center">Manage your preferences and app setup.</p>
+              <TrendingUp className="h-10 w-10 mb-2 text-green-500" />
+              <p className="font-bold text-green-600 mb-1">Progress</p>
+              <p className="text-xs text-green-500 text-center">Track your memory game performance.</p>
             </div>
           </Link>
         </div>

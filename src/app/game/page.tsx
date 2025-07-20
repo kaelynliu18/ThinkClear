@@ -81,6 +81,28 @@ export default function GamePage() {
     }
   };
 
+  // Save progress to localStorage when correctCount changes
+  useEffect(() => {
+    if (correctCount > 0) {
+      const today = new Date().toDateString();
+      const existingProgress = localStorage.getItem('memory-game-progress');
+      let progressData = existingProgress ? JSON.parse(existingProgress) : [];
+      
+      // Find today's entry or create new one
+      let todayEntry = progressData.find((entry: any) => entry.date === today);
+      if (!todayEntry) {
+        todayEntry = { date: today, correctCount: 0, totalAttempts: 0 };
+        progressData.push(todayEntry);
+      }
+      
+      // Update today's stats
+      todayEntry.correctCount = Math.max(todayEntry.correctCount, correctCount);
+      todayEntry.totalAttempts += 1;
+      
+      localStorage.setItem('memory-game-progress', JSON.stringify(progressData));
+    }
+  }, [correctCount]);
+
   const progress = Math.min((correctCount / 10) * 100, 100);
 
   return (

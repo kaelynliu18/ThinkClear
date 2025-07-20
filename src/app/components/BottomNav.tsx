@@ -9,7 +9,8 @@ export default function BottomNav() {
         <a href="/dashboard" className={`px-3 py-1 rounded-lg transition-all duration-150 ${pathname === "/dashboard" ? "text-blue-600 border-b-4 border-blue-500 bg-blue-50 shadow font-bold" : "hover:text-blue-600 hover:bg-blue-50"}`}>Dashboard</a>
         <a href="/faces" className={`px-3 py-1 rounded-lg transition-all duration-150 ${pathname === "/faces" ? "text-blue-600 border-b-4 border-blue-500 bg-blue-50 shadow font-bold" : "hover:text-blue-600 hover:bg-blue-50"}`}>Faces</a>
         <a href="/game" className={`px-3 py-1 rounded-lg transition-all duration-150 ${pathname === "/game" ? "text-blue-600 border-b-4 border-blue-500 bg-blue-50 shadow font-bold" : "hover:text-blue-600 hover:bg-blue-50"}`}>Memory Game</a>
-        <a href="/settings" className={`px-3 py-1 rounded-lg transition-all duration-150 ${pathname === "/settings" ? "text-blue-600 border-b-4 border-blue-500 bg-blue-50 shadow font-bold" : "hover:text-blue-600 hover:bg-blue-50"}`}>Settings</a>
+        <a href="/journal" className={`px-3 py-1 rounded-lg transition-all duration-150 ${pathname === "/journal" ? "text-blue-600 border-b-4 border-blue-500 bg-blue-50 shadow font-bold" : "hover:text-blue-600 hover:bg-blue-50"}`}>Journal</a>
+        <a href="/progress" className={`px-3 py-1 rounded-lg transition-all duration-150 ${pathname === "/progress" ? "text-blue-600 border-b-4 border-blue-500 bg-blue-50 shadow font-bold" : "hover:text-blue-600 hover:bg-blue-50"}`}>Progress</a>
       </nav>
     </footer>
   );
