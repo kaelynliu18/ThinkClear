@@ -220,7 +220,9 @@ export default function GamePage() {
         setCorrectCount((prev) => prev + 1);
       }
       setMessage(
-        `✅ This was ${currentItem.name}, ${currentItem.relationship}!`
+        currentItem.type === 'object' 
+          ? `✅ This was ${currentItem.name}!`
+          : `✅ This was ${currentItem.name}, ${currentItem.relationship}!`
       );
       setRoundCleared(true);
       // Show popup if object
