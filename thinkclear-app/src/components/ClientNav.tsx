@@ -9,7 +9,7 @@ export default function ClientNav() {
   const navItems = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/faces", label: "Faces" },
-    { href: "/game", label: "Memory Game" },
+    { href: "/game", label: "Game" },
     { href: "/settings", label: "Settings" },
   ];
 
