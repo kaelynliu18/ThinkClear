@@ -5,9 +5,6 @@ import cv2
 import numpy as np
 from collections import defaultdict
 import pyttsx3
-import sys
-sys.stdout = open('/home/kaelynliu/face_log.txt', 'a')
-sys.stderr = sys.stdout
 
 # Initialize TTS engine (enabled now)
 engine = pyttsx3.init()
@@ -18,28 +15,30 @@ engine.setProperty('rate', 150)
 GALLERY_DIR = os.path.join(os.path.dirname(__file__), '../thinkclear-app/public/faces-data')
 FACES_JSON  = os.path.join(GALLERY_DIR, 'faces.json')
 
-with open(FACES_JSON, 'r') as f:
-    face_map = json.load(f)
+def load_reference_encodings():
+    with open(FACES_JSON, 'r') as f:
+        face_map = json.load(f)
 
-reference_encodings = {}
-relationship_map = {}
+    reference_encodings = {}
+    relationship_map = {}
 
-for name, info in face_map.items():
-    relationship_map[name] = info.get('relationship', '')
-    encodings = []
-    for filename in info.get('images', []):
-        img_path = os.path.join(GALLERY_DIR, filename)
-        if not os.path.exists(img_path):
-            continue
-        img = face_recognition.load_image_file(img_path)
-        faces = face_recognition.face_encodings(img)
-        if faces:
-            encodings.append(faces[0])
-    if encodings:
-        reference_encodings[name] = encodings
+    for name, info in face_map.items():
+        relationship_map[name] = info.get('relationship', '')
+        encodings = []
+        for filename in info.get('images', []):
+            img_path = os.path.join(GALLERY_DIR, filename)
+            if not os.path.exists(img_path):
+                continue
+            img = face_recognition.load_image_file(img_path)
+            faces = face_recognition.face_encodings(img)
+            if faces:
+                encodings.append(faces[0])
+        if encodings:
+            reference_encodings[name] = encodings
 
-known_encs  = np.vstack([enc for enc_list in reference_encodings.values() for enc in enc_list])
-known_names = [name for name, enc_list in reference_encodings.items() for _ in enc_list]
+    known_encs  = np.vstack([enc for enc_list in reference_encodings.values() for enc in enc_list])
+    known_names = [name for name, enc_list in reference_encodings.items() for _ in enc_list]
+    return known_encs, known_names, relationship_map
 
 # ---------------------- 2.  Set up camera ----------------------
 cap = cv2.VideoCapture(0)
@@ -55,6 +54,10 @@ last_locations = []
 last_labels = []
 last_raw_names = []
 
+# Initial load
+last_mtime = None
+known_encs, known_names, relationship_map = load_reference_encodings()
+
 print("[INFO] Webcam started. Press 'q' to quit.")
 
 while True:
@@ -64,6 +67,17 @@ while True:
     frame_idx += 1
 
     if frame_idx % process_every == 0:
+        # 🔁 Reload face data only if JSON changed
+        try:
+            current_mtime = os.path.getmtime(FACES_JSON)
+            if current_mtime != last_mtime:
+                known_encs, known_names, relationship_map = load_reference_encodings()
+                last_mtime = current_mtime
+                print("[INFO] Reloaded encodings from updated JSON.")
+        except Exception as e:
+            print("[ERROR] Failed to check or reload encodings:", e)
+            continue
+
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         face_locations = face_recognition.face_locations(rgb_frame, model='hog')
