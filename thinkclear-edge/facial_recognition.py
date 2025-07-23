@@ -5,9 +5,13 @@ import cv2
 import numpy as np
 from collections import defaultdict
 import pyttsx3
+import sys
+sys.stdout = open('/home/kaelynliu/face_log.txt', 'a')
+sys.stderr = sys.stdout
 
 # Initialize TTS engine (enabled now)
 engine = pyttsx3.init()
+engine.setProperty('voice', 'english')  # fallback ssudoafe voice
 engine.setProperty('rate', 150)
 
 # ---------------------- 1.  Load reference encodings ----------------------
