@@ -3,121 +3,128 @@
 import { useState, useEffect } from "react";
 import { TrendingUp, Calendar, Target, Users, Package } from "lucide-react";
 
-interface ProgressData {
+interface ProgressEntry {
+  id: string;
+  mode: string;
+  correct: number;
+  total: number;
+  playedAt: string;
+}
+
+interface AccuracyItem {
+  label: string;
+  type: 'face' | 'object';
+  correct: number;
+  total: number;
+}
+
+interface DailyStat {
   date: string;
   correctCount: number;
   totalAttempts: number;
 }
 
-interface FaceData {
-  relationship: string;
-  images: string[];
-}
-
-interface PeopleData {
-  [key: string]: FaceData;
-}
-
-interface AccuracyItem {
-  name: string;
-  accuracy: number;
-  correct: number;
-  total: number;
-  type: 'face' | 'object';
-}
-
 export default function ProgressPage() {
-  const [dailyStats, setDailyStats] = useState<ProgressData[]>([]);
+  const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [personAccuracy, setPersonAccuracy] = useState<AccuracyItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadProgress();
-    loadFacesAndAccuracy();
   }, []);
 
   const loadProgress = () => {
-    // Load progress data from localStorage
-    const progressData = localStorage.getItem('memory-game-progress');
-    if (progressData) {
-      const parsed = JSON.parse(progressData);
-      setDailyStats(parsed);
-      
-      // Calculate current streak
-      let streak = 0;
-      const today = new Date().toDateString();
-      for (let i = parsed.length - 1; i >= 0; i--) {
-        if (parsed[i].date === today || 
-            new Date(parsed[i].date).getTime() === new Date(today).getTime() - (streak + 1) * 24 * 60 * 60 * 1000) {
-          streak++;
-        } else {
-          break;
+    fetch('/api/progress', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data || data.error) {
+          setDailyStats([]);
+          setPersonAccuracy([]);
+          setLoading(false);
+          return;
         }
-      }
-      setCurrentStreak(streak);
-    }
+
+        const entries: ProgressEntry[] = data.entries ?? [];
+        const accuracy: AccuracyItem[] = data.accuracy ?? [];
+
+        const dailyMap: Record<string, { correct: number; attempts: number }> = {};
+        entries.forEach((entry) => {
+          const key = new Date(entry.playedAt).toDateString();
+          if (!dailyMap[key]) dailyMap[key] = { correct: 0, attempts: 0 };
+          dailyMap[key].correct += entry.correct;
+          dailyMap[key].attempts += entry.total;
+        });
+
+        const dailyArray: DailyStat[] = Object.entries(dailyMap)
+          .map(([date, stats]) => ({
+            date,
+            correctCount: stats.correct,
+            totalAttempts: stats.attempts,
+          }))
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        setDailyStats(dailyArray);
+
+        let streak = 0;
+        const today = new Date().toDateString();
+        const reversed = [...dailyArray].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        for (const stat of reversed) {
+          const dateValue = new Date(stat.date).toDateString();
+          const expected = new Date(today);
+          expected.setDate(expected.getDate() - streak);
+          if (dateValue === expected.toDateString()) {
+            streak++;
+          } else {
+            break;
+          }
+        }
+        setCurrentStreak(streak);
+
+        setPersonAccuracy(
+          accuracy.map((item) => ({
+            label: item.label,
+            type: item.type,
+            correct: item.correct,
+            total: item.total,
+          }))
+        );
+
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error('Failed to load progress', error);
+        setLoading(false);
+      });
   };
 
-  const loadFacesAndAccuracy = async () => {
-    try {
-      // Load faces from API
-      const response = await fetch('/api/faces');
-      const facesData: PeopleData = await response.json();
-      const currentFaces = Object.keys(facesData);
+  const toAccuracyDisplay = (type: 'face' | 'object') =>
+    personAccuracy
+      .filter((item) => item.type === type)
+      .map((item) => ({
+        name: item.label,
+        accuracy: item.total > 0 ? Math.round((item.correct / item.total) * 100) : 0,
+        correct: item.correct,
+        total: item.total,
+        type,
+      }))
+      .sort((a, b) => b.accuracy - a.accuracy);
 
-      // Load accuracy data and filter to only current faces
-      const accuracyData = localStorage.getItem('person-accuracy');
-      if (accuracyData) {
-        const parsed = JSON.parse(accuracyData);
-        
-        // Filter face accuracy
-        const faceAccuracy = Object.entries(parsed)
-          .filter(([name]) => currentFaces.includes(name))
-          .map(([name, data]: [string, any]) => ({
-            name,
-            accuracy: data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0,
-            correct: data.correct,
-            total: data.total,
-            type: 'face' as const
-          }))
-          .sort((a, b) => b.accuracy - a.accuracy);
-        
-        // Filter object accuracy (objects are: Apple, Book, Car, Dog, House, Tree, Star, Heart)
-        const objectNames = ['Apple', 'Book', 'Car', 'Dog', 'House', 'Tree', 'Star', 'Heart'];
-        const objectAccuracy = Object.entries(parsed)
-          .filter(([name]) => objectNames.includes(name))
-          .map(([name, data]: [string, any]) => ({
-            name,
-            accuracy: data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0,
-            correct: data.correct,
-            total: data.total,
-            type: 'object' as const
-          }))
-          .sort((a, b) => b.accuracy - a.accuracy);
-        
-        setPersonAccuracy([...faceAccuracy, ...objectAccuracy]);
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error('Failed to load faces:', error);
-      setLoading(false);
-    }
-  };
-
-  const getFaceAccuracy = () => personAccuracy.filter(item => item.type === 'face');
-  const getObjectAccuracy = () => personAccuracy.filter(item => item.type === 'object');
+  const getFaceAccuracy = () => toAccuracyDisplay('face');
+  const getObjectAccuracy = () => toAccuracyDisplay('object');
 
   const getTodayStats = () => {
     const today = new Date().toDateString();
-    return dailyStats.find(stat => stat.date === today) || { correctCount: 0, totalAttempts: 0 };
+    return dailyStats.find((stat) => stat.date === today) || { correctCount: 0, totalAttempts: 0 };
   };
 
   const getMonthlyStats = () => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const recentStats = dailyStats.filter(stat => new Date(stat.date) >= thirtyDaysAgo);
-    
+    const recentStats = dailyStats.filter((stat) => new Date(stat.date) >= thirtyDaysAgo);
+
     const totalCorrect = recentStats.reduce((sum, stat) => sum + stat.correctCount, 0);
     const totalAttempts = recentStats.reduce((sum, stat) => sum + stat.totalAttempts, 0);
     const daysPlayed = recentStats.length;

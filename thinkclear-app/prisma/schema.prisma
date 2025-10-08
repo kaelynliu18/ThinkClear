@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ProgressEntry {
+  id           String   @id @default(uuid())
+  userId       String
+  mode         String   // 'face' | 'object'
+  correct      Int
+  total        Int
+  playedAt     DateTime
+  createdAt    DateTime @default(now())
+}
+
+model AccuracyStat {
+  id        String @id @default(uuid())
+  userId    String
+  label     String
+  type      String   // 'face' | 'object'
+  correct   Int      @default(0)
+  total     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, label, type])
+}
+
+model JournalEntry {
+  id        String   @id @default(uuid())
+  userId    String
+  content   String
+  entryDate DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

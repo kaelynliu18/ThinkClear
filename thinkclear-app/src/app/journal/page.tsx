@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Calendar, Clock, X } from "lucide-react";
 
 interface JournalEntry {
   id: string;
   content: string;
-  date: string;
-  timestamp: number;
+  entryDate: string;
+  createdAt: string;
 }
 
 export default function JournalPage() {
@@ -21,46 +21,65 @@ export default function JournalPage() {
   }, []);
 
   const loadPastEntries = () => {
-    const entries: JournalEntry[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('journal-')) {
-        const content = localStorage.getItem(key);
-        const timestamp = parseInt(key.replace('journal-', ''));
-        const date = new Date(timestamp).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-        
-        entries.push({
-          id: key,
-          content: content || '',
-          date,
-          timestamp
-        });
-      }
-    }
-    // Sort by timestamp (newest first)
-    entries.sort((a, b) => b.timestamp - a.timestamp);
-    setPastEntries(entries);
+    fetch('/api/journal', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data || data.error) {
+          setPastEntries([]);
+          return;
+        }
+        const entries: JournalEntry[] = (data.entries ?? []).map((entry: any) => ({
+          id: entry.id,
+          content: entry.content,
+          entryDate: entry.entryDate,
+          createdAt: entry.createdAt,
+        }));
+        setPastEntries(entries);
+      })
+      .catch((error) => {
+        console.error('Failed to load journal entries', error);
+        setPastEntries([]);
+      });
   };
 
   const handleSave = () => {
     if (entry.trim()) {
-      const timestamp = Date.now();
-      localStorage.setItem(`journal-${timestamp}`, entry);
-      setEntry("");
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-      loadPastEntries(); // Refresh the list
+      fetch('/api/journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ content: entry }),
+      })
+        .then((res) => res.json())
+        .then((result) => {
+          if (result && !result.error) {
+            setEntry('');
+            setSaved(true);
+            setTimeout(() => setSaved(false), 2000);
+            loadPastEntries();
+          } else {
+            alert('Failed to save entry.');
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to save journal entry', error);
+          alert('Failed to save entry.');
+        });
     }
   };
 
   const deleteEntry = (id: string) => {
-    localStorage.removeItem(id);
-    loadPastEntries(); // Refresh the list
+    fetch('/api/journal', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ id }),
+    })
+      .then(() => loadPastEntries())
+      .catch((error) => {
+        console.error('Failed to delete journal entry', error);
+        alert('Failed to delete entry.');
+      });
   };
 
   return (
@@ -126,7 +145,12 @@ export default function JournalPage() {
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center text-sm text-blue-600 font-medium">
                         <Calendar className="w-4 h-4 mr-1" />
-                        {entry.date}
+                        {new Date(entry.entryDate).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
                       </div>
                       <button
                         onClick={() => deleteEntry(entry.id)}
@@ -136,9 +160,7 @@ export default function JournalPage() {
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                      {entry.content}
-                    </p>
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{entry.content}</p>
                   </div>
                 ))}
               </div>

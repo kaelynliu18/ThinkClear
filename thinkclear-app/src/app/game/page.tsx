@@ -40,19 +40,31 @@ export default function GamePage() {
 
   const loadFaces = async () => {
     try {
-      const response = await fetch("/api/faces");
-      const data: PeopleData = await response.json();
+      const response = await fetch("/api/faces", {
+        credentials: "include",
+      });
+      const data: PeopleData | { error?: string } = await response.json();
 
-      const peopleArray = Object.entries(data).map(([name, faceData]) => ({
-        name,
-        relationship: faceData.relationship,
-        img: `/faces-data/${faceData.images[0]}`,
-      }));
+      if (!response.ok || !data || typeof data !== "object" || Array.isArray(data)) {
+        console.error("Failed to load faces:", (data as { error?: string })?.error);
+        setPeople([]);
+        setLoading(false);
+        return;
+      }
+
+      const peopleArray = Object.entries(data as PeopleData)
+        .filter(([, value]) => value.images.length > 0)
+        .map(([name, faceData]) => ({
+          name,
+          relationship: faceData.relationship,
+          img: `/faces-data/${faceData.images[0]}`,
+        }));
 
       setPeople(peopleArray);
       setLoading(false);
     } catch (error) {
       console.error("Failed to load faces:", error);
+      setPeople([]);
       setLoading(false);
     }
   };
@@ -133,44 +145,31 @@ export default function GamePage() {
     setMadeMistake(false);
   };
 
-  useEffect(() => {
-    if (correctCount > 0 && gameStarted) {
-      const today = new Date().toDateString();
-      const existingProgress = localStorage.getItem("memory-game-progress");
-      let progressData = existingProgress ? JSON.parse(existingProgress) : [];
-
-      let todayEntry = progressData.find((entry: any) => entry.date === today);
-      if (!todayEntry) {
-        todayEntry = {
-          date: today,
-          correctCount: 0,
-          totalAttempts: 0,
-          personStats: {},
-        };
-        progressData.push(todayEntry);
-      }
-
-      todayEntry.correctCount = Math.max(todayEntry.correctCount, correctCount);
-      todayEntry.totalAttempts += 1;
-
-      localStorage.setItem("memory-game-progress", JSON.stringify(progressData));
+  const logProgress = async (isCorrect: boolean) => {
+    try {
+      await fetch("/api/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          mode: "face",
+          correct: isCorrect ? 1 : 0,
+          total: 1,
+          playedAt: new Date().toISOString(),
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to log progress", error);
     }
-  }, [correctCount, gameStarted]);
+  };
 
   const savePersonAccuracy = (itemName: string, isCorrect: boolean) => {
-    const existingAccuracy = localStorage.getItem("person-accuracy");
-    let accuracyData = existingAccuracy ? JSON.parse(existingAccuracy) : {};
-
-    if (!accuracyData[itemName]) {
-      accuracyData[itemName] = { correct: 0, total: 0 };
-    }
-
-    accuracyData[itemName].total += 1;
-    if (isCorrect) {
-      accuracyData[itemName].correct += 1;
-    }
-
-    localStorage.setItem("person-accuracy", JSON.stringify(accuracyData));
+    fetch("/api/accuracy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ label: itemName, type: "face", correct: isCorrect }),
+    }).catch((error) => console.error("Failed to record accuracy", error));
   };
 
   const handleSelection = (option: string) => {
@@ -186,6 +185,7 @@ export default function GamePage() {
     }
 
     savePersonAccuracy(currentItem.name, isCorrect);
+    logProgress(isCorrect);
 
     if (isCorrect) {
       if (!madeMistake) {

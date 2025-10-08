@@ -19,12 +19,28 @@ export default function FacesPage() {
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // fetch gallery on mount or when showModal closes
+  const loadFaces = async () => {
+    try {
+      const res = await fetch("/api/faces", {
+        credentials: "include",
+      });
+      const json = await res.json();
+
+      if (!res.ok) {
+        console.error("Failed to load faces:", json?.error);
+        setFaces({});
+        return;
+      }
+
+      setFaces(json ?? {});
+    } catch (err) {
+      console.error("Failed to load faces", err);
+      setFaces({});
+    }
+  };
+
   useEffect(() => {
-    fetch("/api/faces")
-      .then((res) => res.json())
-      .then(setFaces)
-      .catch(console.error);
+    loadFaces();
   }, [showModal]);
 
   // Add a function to handle deleting a face
@@ -35,6 +51,7 @@ export default function FacesPage() {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: person, file: image }),
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to delete");
       // Remove from UI
@@ -69,6 +86,7 @@ export default function FacesPage() {
       const res = await fetch("/api/upload", {
         method: "POST",
         body: formData,
+        credentials: "include",
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Upload failed");
@@ -78,6 +96,7 @@ export default function FacesPage() {
       setRelationship("");
       setFile(null);
       fileInputRef.current!.value = "";
+      await loadFaces();
     } catch (err: any) {
       setError(err.message);
     } finally {
