@@ -1,22 +1,10 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import { writeFile } from 'fs/promises';
 import sharp from 'sharp';
 import heicConvert from 'heic-convert';
 import { currentUser } from '@clerk/nextjs/server';
-
-const DATA_DIR = path.join(process.cwd(), 'data', 'faces-data');
-const DATA_FILE = path.join(DATA_DIR, 'faces.json');
-
-function ensureDataFile() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify({}), 'utf8');
-  }
-}
+import { put } from '@vercel/blob';
+import db from '../../../lib/db';
+import { randomUUID } from 'crypto';
 
 export async function POST(req: Request) {
   const user = await currentUser();
@@ -59,42 +47,47 @@ export async function POST(req: Request) {
   const safeName = name.replace(/\s+/g, '_').toLowerCase();
   const fileName = `${safeName}_${Date.now()}.${finalExt}`;
 
-  const userDir = path.join(DATA_DIR, userId);
-  if (!fs.existsSync(userDir)) {
-    fs.mkdirSync(userDir, { recursive: true });
-  }
-
-  const filePath = path.join(userDir, fileName);
+  let blobUrl: string;
   try {
-    await writeFile(filePath, finalBuffer);
+    const result = await put(`faces/${userId}/${fileName}`, finalBuffer, {
+      access: 'public',
+      contentType: 'image/jpeg',
+    });
+    blobUrl = result.url;
   } catch (error) {
-    console.error('Failed to write face image', error);
+    console.error('Failed to upload face image', error);
     return NextResponse.json({ error: 'Failed to store face image' }, { status: 500 });
   }
 
-  const storedPath = `${userId}/${fileName}`;
-
   try {
-    ensureDataFile();
-    const raw = fs.readFileSync(DATA_FILE, 'utf8');
-    const data = raw ? JSON.parse(raw) : {};
-    if (!data[userId]) data[userId] = {};
-    if (!data[userId][name]) {
-      data[userId][name] = { relationship, images: [] };
-    }
-    data[userId][name].relationship = relationship;
-    data[userId][name].images.unshift(storedPath);
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+    const now = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO face_entries (id, user_id, name, relationship, image_url, created_at, updated_at)
+      VALUES (@id, @userId, @name, @relationship, @imageUrl, @createdAt, @updatedAt)
+      ON CONFLICT(user_id, name) DO UPDATE SET
+        relationship = excluded.relationship,
+        image_url = excluded.image_url,
+        updated_at = excluded.updated_at
+    `).run({
+      id: randomUUID(),
+      userId,
+      name,
+      relationship,
+      imageUrl: blobUrl,
+      createdAt: now,
+      updatedAt: now,
+    });
 
     return NextResponse.json({
       message: 'Upload successful',
-      file: fileName,
+      face: {
+        name,
+        relationship,
+        imageUrl: blobUrl,
+      },
     });
   } catch (error) {
     console.error('Failed to persist face metadata', error);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
     return NextResponse.json({ error: 'Failed to save face' }, { status: 500 });
   }
 }

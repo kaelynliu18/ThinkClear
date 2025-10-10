@@ -54,15 +54,7 @@ export default function FacesPage() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to delete");
-      // Remove from UI
-      setFaces((prev) => {
-        const updated = { ...prev };
-        if (updated[person]) {
-          updated[person].images = updated[person].images.filter((img) => img !== image);
-          if (updated[person].images.length === 0) delete updated[person];
-        }
-        return { ...updated };
-      });
+      await loadFaces();
     } catch (err) {
       alert("Could not delete face.");
     }
@@ -135,7 +127,7 @@ export default function FacesPage() {
                 <Trash2 size={20} />
               </button>
               <img
-                src={`/api/face-image?path=${encodeURIComponent(images[0])}`}
+                src={images[0]}
                 alt={person}
                 className="w-32 h-32 object-cover rounded-full border-4 border-blue-200 shadow mb-4"
               />

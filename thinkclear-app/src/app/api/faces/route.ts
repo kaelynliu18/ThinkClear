@@ -1,26 +1,6 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import fs from 'fs';
-import path from 'path';
-
-type GalleryEntry = {
-  relationship: string;
-  images: string[];
-};
-
-type GalleryData = Record<string, GalleryEntry>;
-
-const DATA_DIR = path.join(process.cwd(), 'data', 'faces-data');
-const DATA_FILE = path.join(DATA_DIR, 'faces.json');
-
-function ensureDataFile() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify({}), 'utf8');
-  }
-}
+import db from '../../../lib/db';
 
 export async function GET() {
   const user = await currentUser();
@@ -31,13 +11,21 @@ export async function GET() {
   }
 
   try {
-    ensureDataFile();
-    const raw = fs.readFileSync(DATA_FILE, 'utf8');
-    const data: GalleryData = JSON.parse(raw);
-    const userData = data[userId] ?? {};
-    return NextResponse.json(userData);
+    const rows = db
+      .prepare('SELECT name, relationship, image_url as imageUrl FROM face_entries WHERE user_id = ? ORDER BY updated_at DESC')
+      .all(userId) as Array<{ name: string; relationship: string; imageUrl: string }>;
+
+    const response = rows.reduce<Record<string, { relationship: string; images: string[] }>>((acc, row) => {
+      acc[row.name] = {
+        relationship: row.relationship,
+        images: [row.imageUrl],
+      };
+      return acc;
+    }, {});
+
+    return NextResponse.json(response);
   } catch (error) {
-    console.error('Failed to load faces.json', error);
+    console.error('Failed to load faces', error);
     return NextResponse.json({ error: 'Failed to load faces' }, { status: 500 });
   }
 }
