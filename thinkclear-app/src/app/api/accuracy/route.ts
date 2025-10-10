@@ -11,17 +11,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { label?: string; type?: string; correct?: boolean };
+  let body: { label?: string; correct?: boolean };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { label, type, correct } = body;
-  if (!label || !type || typeof correct !== 'boolean') {
+  const { label, correct } = body;
+  if (!label || typeof correct !== 'boolean') {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
+
+  const statType = 'face';
 
   const now = new Date().toISOString();
   const insert = db.prepare(`
@@ -37,7 +39,7 @@ export async function POST(req: Request) {
     id: randomUUID(),
     userId,
     label,
-    type,
+    type: statType,
     correct: correct ? 1 : 0,
     total: 1,
     updatedAt: now,
@@ -45,7 +47,7 @@ export async function POST(req: Request) {
 
   const stat = db
     .prepare('SELECT label, type, correct, total FROM accuracy_stats WHERE user_id = ? AND label = ? AND type = ?')
-    .get(userId, label, type);
+    .get(userId, label, statType);
 
   return NextResponse.json({ stat });
 }
@@ -59,8 +61,8 @@ export async function GET() {
   }
 
   const stats = db
-    .prepare('SELECT label, type, correct, total FROM accuracy_stats WHERE user_id = ?')
-    .all(userId);
+    .prepare('SELECT label, type, correct, total FROM accuracy_stats WHERE user_id = ? AND type = ?')
+    .all(userId, 'face');
 
   return NextResponse.json({ stats });
 }

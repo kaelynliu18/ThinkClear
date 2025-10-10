@@ -152,7 +152,6 @@ export default function GamePage() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          mode: "face",
           correct: isCorrect ? 1 : 0,
           total: 1,
           playedAt: new Date().toISOString(),
@@ -168,7 +167,7 @@ export default function GamePage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ label: itemName, type: "face", correct: isCorrect }),
+      body: JSON.stringify({ label: itemName, correct: isCorrect }),
     }).catch((error) => console.error("Failed to record accuracy", error));
   };
 

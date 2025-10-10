@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TrendingUp, Calendar, Target, Users, Package } from "lucide-react";
+import { TrendingUp, Calendar, Target, Users } from "lucide-react";
 
 interface ProgressEntry {
   id: string;
-  mode: string;
+  mode: 'face';
   correct: number;
   total: number;
   playedAt: string;
@@ -13,7 +13,6 @@ interface ProgressEntry {
 
 interface AccuracyItem {
   label: string;
-  type: 'face' | 'object';
   correct: number;
   total: number;
 }
@@ -45,8 +44,11 @@ export default function ProgressPage() {
           return;
         }
 
-        const entries: ProgressEntry[] = data.entries ?? [];
-        const accuracy: AccuracyItem[] = data.accuracy ?? [];
+        const entries: ProgressEntry[] = Array.isArray(data.entries)
+          ? (data.entries as ProgressEntry[])
+          : [];
+        const accuracy: Array<{ label: string; type?: string; correct: number; total: number }> =
+          Array.isArray(data.accuracy) ? data.accuracy : [];
 
         const dailyMap: Record<string, { correct: number; attempts: number }> = {};
         entries.forEach((entry) => {
@@ -83,14 +85,15 @@ export default function ProgressPage() {
         }
         setCurrentStreak(streak);
 
-        setPersonAccuracy(
-          accuracy.map((item) => ({
+        const faceAccuracyOnly = accuracy
+          .filter((item) => (item.type ?? 'face') === 'face')
+          .map((item) => ({
             label: item.label,
-            type: item.type,
             correct: item.correct,
             total: item.total,
-          }))
-        );
+          }));
+
+        setPersonAccuracy(faceAccuracyOnly);
 
         setLoading(false);
       })
@@ -100,20 +103,15 @@ export default function ProgressPage() {
       });
   };
 
-  const toAccuracyDisplay = (type: 'face' | 'object') =>
+  const getFaceAccuracy = () =>
     personAccuracy
-      .filter((item) => item.type === type)
       .map((item) => ({
         name: item.label,
         accuracy: item.total > 0 ? Math.round((item.correct / item.total) * 100) : 0,
         correct: item.correct,
         total: item.total,
-        type,
       }))
       .sort((a, b) => b.accuracy - a.accuracy);
-
-  const getFaceAccuracy = () => toAccuracyDisplay('face');
-  const getObjectAccuracy = () => toAccuracyDisplay('object');
 
   const getTodayStats = () => {
     const today = new Date().toDateString();
@@ -213,7 +211,7 @@ export default function ProgressPage() {
                 </div>
               </div>
 
-              {/* Right Column - Accuracy by Person and Objects */}
+              {/* Right Column - Accuracy by Person */}
               <div className="space-y-6">
                 {/* Accuracy by Person */}
                 <div className="bg-white/90 rounded-3xl shadow-2xl p-6">
@@ -248,38 +246,6 @@ export default function ProgressPage() {
                   </div>
                 </div>
 
-                {/* Accuracy by Objects */}
-                <div className="bg-white/90 rounded-3xl shadow-2xl p-6">
-                  <div className="flex items-center mb-4">
-                    <Package className="h-8 w-8 text-emerald-500 mr-3" />
-                    <h2 className="text-2xl font-bold text-emerald-600">Accuracy by Objects</h2>
-                  </div>
-                  <div className="space-y-4">
-                    {getObjectAccuracy().length === 0 ? (
-                      <div className="text-center text-gray-500 py-4">
-                        No object accuracy data yet. Play Object Mode to see your performance!
-                      </div>
-                    ) : (
-                      getObjectAccuracy().map((object, index) => (
-                        <div key={index} className="border-b border-gray-100 pb-3 last:border-b-0">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="font-semibold text-gray-700">{object.name}</span>
-                            <span className="text-sm font-bold text-emerald-600">{object.accuracy}%</span>
-                          </div>
-                          <div className="w-full bg-emerald-100 rounded-full h-2">
-                            <div 
-                              className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-2 rounded-full transition-all duration-500"
-                              style={{ width: `${object.accuracy}%` }}
-                            ></div>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {object.correct}/{object.total} correct
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
               </div>
             </div>
 

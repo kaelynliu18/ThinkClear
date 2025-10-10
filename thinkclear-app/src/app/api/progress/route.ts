@@ -19,8 +19,13 @@ export async function POST(req: Request) {
   }
 
   const { mode, correct, total, playedAt } = body;
-  if (!mode || typeof correct !== 'number' || typeof total !== 'number') {
+  if (typeof correct !== 'number' || typeof total !== 'number') {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+  }
+
+  const normalizedMode = mode ? mode.toLowerCase() : 'face';
+  if (normalizedMode !== 'face') {
+    return NextResponse.json({ error: 'Unsupported mode' }, { status: 400 });
   }
 
   const played = playedAt ? new Date(playedAt) : new Date();
@@ -35,7 +40,7 @@ export async function POST(req: Request) {
   `).run({
     id: randomUUID(),
     userId,
-    mode,
+    mode: normalizedMode,
     correct,
     total,
     playedAt: played.toISOString(),
@@ -54,12 +59,14 @@ export async function GET() {
   }
 
   const entries = db
-    .prepare('SELECT id, mode, correct, total, played_at as playedAt FROM progress_entries WHERE user_id = ? ORDER BY played_at ASC')
-    .all(userId);
+    .prepare(
+      'SELECT id, mode, correct, total, played_at as playedAt FROM progress_entries WHERE user_id = ? AND mode = ? ORDER BY played_at ASC'
+    )
+    .all(userId, 'face');
 
   const accuracy = db
-    .prepare('SELECT label, type, correct, total FROM accuracy_stats WHERE user_id = ?')
-    .all(userId);
+    .prepare('SELECT label, type, correct, total FROM accuracy_stats WHERE user_id = ? AND type = ?')
+    .all(userId, 'face');
 
   return NextResponse.json({ entries, accuracy });
 }
