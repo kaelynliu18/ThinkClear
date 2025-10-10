@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { currentUser } from '@clerk/nextjs/server';
-const DATA_DIR = path.join(process.cwd(), 'public', 'faces-data');
+const DATA_DIR = path.join(process.cwd(), 'data', 'faces-data');
 const DATA_FILE = path.join(DATA_DIR, 'faces.json');
 
 function ensureDataFile() {
@@ -45,7 +45,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Face not found' }, { status: 404 });
     }
 
-    const absolutePath = path.join(process.cwd(), 'public', 'faces-data', userId, fileName);
+    const absolutePath = path.join(DATA_DIR, userId, fileName);
     if (fs.existsSync(absolutePath)) {
       fs.unlinkSync(absolutePath);
     }

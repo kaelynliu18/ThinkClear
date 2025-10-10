@@ -135,7 +135,7 @@ export default function FacesPage() {
                 <Trash2 size={20} />
               </button>
               <img
-                src={`/faces-data/${images[0]}`}
+                src={`/api/face-image?path=${encodeURIComponent(images[0])}`}
                 alt={person}
                 className="w-32 h-32 object-cover rounded-full border-4 border-blue-200 shadow mb-4"
               />

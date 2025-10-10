@@ -57,7 +57,7 @@ export default function GamePage() {
         .map(([name, faceData]) => ({
           name,
           relationship: faceData.relationship,
-          img: `/faces-data/${faceData.images[0]}`,
+          img: `/api/face-image?path=${encodeURIComponent(faceData.images[0])}`,
         }));
 
       setPeople(peopleArray);

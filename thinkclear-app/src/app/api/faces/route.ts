@@ -10,7 +10,7 @@ type GalleryEntry = {
 
 type GalleryData = Record<string, GalleryEntry>;
 
-const DATA_DIR = path.join(process.cwd(), 'public', 'faces-data');
+const DATA_DIR = path.join(process.cwd(), 'data', 'faces-data');
 const DATA_FILE = path.join(DATA_DIR, 'faces.json');
 
 function ensureDataFile() {

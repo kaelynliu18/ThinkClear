@@ -6,7 +6,7 @@ import sharp from 'sharp';
 import heicConvert from 'heic-convert';
 import { currentUser } from '@clerk/nextjs/server';
 
-const DATA_DIR = path.join(process.cwd(), 'public', 'faces-data');
+const DATA_DIR = path.join(process.cwd(), 'data', 'faces-data');
 const DATA_FILE = path.join(DATA_DIR, 'faces.json');
 
 function ensureDataFile() {
@@ -59,15 +59,20 @@ export async function POST(req: Request) {
   const safeName = name.replace(/\s+/g, '_').toLowerCase();
   const fileName = `${safeName}_${Date.now()}.${finalExt}`;
 
-  const userDir = path.join(process.cwd(), 'public', 'faces-data', userId);
+  const userDir = path.join(DATA_DIR, userId);
   if (!fs.existsSync(userDir)) {
     fs.mkdirSync(userDir, { recursive: true });
   }
 
   const filePath = path.join(userDir, fileName);
-  await writeFile(filePath, finalBuffer);
+  try {
+    await writeFile(filePath, finalBuffer);
+  } catch (error) {
+    console.error('Failed to write face image', error);
+    return NextResponse.json({ error: 'Failed to store face image' }, { status: 500 });
+  }
 
-  const imagePath = `/faces-data/${userId}/${fileName}`;
+  const storedPath = `${userId}/${fileName}`;
 
   try {
     ensureDataFile();
@@ -78,7 +83,7 @@ export async function POST(req: Request) {
       data[userId][name] = { relationship, images: [] };
     }
     data[userId][name].relationship = relationship;
-    data[userId][name].images.unshift(`${userId}/${fileName}`);
+    data[userId][name].images.unshift(storedPath);
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 
     return NextResponse.json({
