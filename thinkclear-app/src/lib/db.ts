@@ -41,17 +41,6 @@ db.exec(`
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
-
-  CREATE TABLE IF NOT EXISTS face_entries (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    name TEXT NOT NULL,
-    relationship TEXT NOT NULL,
-    image_url TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    UNIQUE(user_id, name)
-  );
 `);
 
 export default db;

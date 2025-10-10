@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { del } from '@vercel/blob';
-import db from '../../../lib/db';
+import { loadFaceMetadata, saveFaceMetadata } from '../../../lib/faceStorage';
 
 export async function DELETE(req: Request) {
   const user = await currentUser();
@@ -24,16 +24,25 @@ export async function DELETE(req: Request) {
   }
 
   try {
-    await del(file);
-  } catch (error) {
-    console.error('Failed to delete blob', error);
-  }
+    const metadata = await loadFaceMetadata(userId);
+    const entry = metadata[name];
+    if (!entry) {
+      return NextResponse.json({ error: 'Face not found' }, { status: 404 });
+    }
 
-  try {
-    db.prepare('DELETE FROM face_entries WHERE user_id = ? AND name = ?').run(userId, name);
+    entry.images = entry.images.filter((url) => url !== file);
+    if (entry.images.length === 0) {
+      delete metadata[name];
+    }
+
+    await del(file).catch((error) => {
+      console.warn('Failed to delete blob', error);
+    });
+
+    await saveFaceMetadata(userId, metadata);
     return NextResponse.json({ message: 'Delete successful' });
   } catch (error) {
-    console.error('Failed to delete face entry', error);
+    console.error('Failed to delete face', error);
     return NextResponse.json({ error: 'Failed to delete face' }, { status: 500 });
   }
 }

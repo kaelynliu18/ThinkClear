@@ -3,8 +3,7 @@ import sharp from 'sharp';
 import heicConvert from 'heic-convert';
 import { currentUser } from '@clerk/nextjs/server';
 import { put } from '@vercel/blob';
-import db from '../../../lib/db';
-import { randomUUID } from 'crypto';
+import { loadFaceMetadata, saveFaceMetadata } from '../../../lib/faceStorage';
 
 export async function POST(req: Request) {
   const user = await currentUser();
@@ -46,48 +45,34 @@ export async function POST(req: Request) {
 
   const safeName = name.replace(/\s+/g, '_').toLowerCase();
   const fileName = `${safeName}_${Date.now()}.${finalExt}`;
+  const imagePath = `faces/${userId}/images/${fileName}`;
 
-  let blobUrl: string;
   try {
-    const result = await put(`faces/${userId}/${fileName}`, finalBuffer, {
+    const { url } = await put(imagePath, finalBuffer, {
       access: 'public',
       contentType: 'image/jpeg',
+      addRandomSuffix: false,
     });
-    blobUrl = result.url;
-  } catch (error) {
-    console.error('Failed to upload face image', error);
-    return NextResponse.json({ error: 'Failed to store face image' }, { status: 500 });
-  }
 
-  try {
-    const now = new Date().toISOString();
-    db.prepare(`
-      INSERT INTO face_entries (id, user_id, name, relationship, image_url, created_at, updated_at)
-      VALUES (@id, @userId, @name, @relationship, @imageUrl, @createdAt, @updatedAt)
-      ON CONFLICT(user_id, name) DO UPDATE SET
-        relationship = excluded.relationship,
-        image_url = excluded.image_url,
-        updated_at = excluded.updated_at
-    `).run({
-      id: randomUUID(),
-      userId,
-      name,
-      relationship,
-      imageUrl: blobUrl,
-      createdAt: now,
-      updatedAt: now,
-    });
+    const metadata = await loadFaceMetadata(userId);
+    if (!metadata[name]) {
+      metadata[name] = { relationship, images: [] };
+    }
+    metadata[name].relationship = relationship;
+    metadata[name].images.unshift(url);
+
+    await saveFaceMetadata(userId, metadata);
 
     return NextResponse.json({
       message: 'Upload successful',
       face: {
         name,
         relationship,
-        imageUrl: blobUrl,
+        imageUrl: url,
       },
     });
   } catch (error) {
-    console.error('Failed to persist face metadata', error);
-    return NextResponse.json({ error: 'Failed to save face' }, { status: 500 });
+    console.error('Failed to upload face image', error);
+    return NextResponse.json({ error: 'Failed to store face image' }, { status: 500 });
   }
 }
