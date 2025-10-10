@@ -52,6 +52,8 @@ export async function POST(req: Request) {
       access: 'public',
       contentType: 'image/jpeg',
       addRandomSuffix: false,
+      allowOverwrite: true,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
     });
 
     const metadata = await loadFaceMetadata(userId);
@@ -59,7 +61,7 @@ export async function POST(req: Request) {
       metadata[name] = { relationship, images: [] };
     }
     metadata[name].relationship = relationship;
-    metadata[name].images.unshift(url);
+    metadata[name].images = [url, ...metadata[name].images.filter((existing) => existing !== url)];
 
     await saveFaceMetadata(userId, metadata);
 

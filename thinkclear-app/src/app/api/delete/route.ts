@@ -35,7 +35,7 @@ export async function DELETE(req: Request) {
       delete metadata[name];
     }
 
-    await del(file).catch((error) => {
+    await del(file, { token: process.env.BLOB_READ_WRITE_TOKEN }).catch((error) => {
       console.warn('Failed to delete blob', error);
     });
 

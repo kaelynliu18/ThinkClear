@@ -13,7 +13,11 @@ async function fetchBlobContent(downloadUrl: string): Promise<string> {
 }
 
 export async function loadFaceMetadata(userId: string): Promise<FaceMetadata> {
-  const { blobs } = await list({ prefix: metadataPathFor(userId), limit: 1 });
+  const { blobs } = await list({
+    prefix: metadataPathFor(userId),
+    limit: 1,
+    token: process.env.BLOB_READ_WRITE_TOKEN,
+  });
   if (blobs.length === 0) {
     return {};
   }
@@ -31,5 +35,7 @@ export async function saveFaceMetadata(userId: string, data: FaceMetadata) {
     access: 'public',
     contentType: 'application/json',
     addRandomSuffix: false,
+    allowOverwrite: true,
+    token: process.env.BLOB_READ_WRITE_TOKEN,
   });
 }
