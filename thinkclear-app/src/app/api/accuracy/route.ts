@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import db from '../../../lib/db';
-import { randomUUID } from 'crypto';
+import {
+  loadProgressData,
+  saveProgressData,
+  updateAccuracyStat,
+} from '../../../lib/progressStorage';
 
 export async function POST(req: Request) {
   const user = await currentUser();
@@ -23,33 +26,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
 
-  const statType = 'face';
+  try {
+    const data = await loadProgressData(userId);
+    const updated = updateAccuracyStat(data, label, correct);
+    await saveProgressData(userId, updated);
 
-  const now = new Date().toISOString();
-  const insert = db.prepare(`
-    INSERT INTO accuracy_stats (id, user_id, label, type, correct, total, updated_at)
-    VALUES (@id, @userId, @label, @type, @correct, @total, @updatedAt)
-    ON CONFLICT(user_id, label, type) DO UPDATE SET
-      correct = accuracy_stats.correct + excluded.correct,
-      total = accuracy_stats.total + excluded.total,
-      updated_at = excluded.updated_at
-  `);
+    const stat = {
+      label,
+      type: 'face' as const,
+      correct: updated.accuracy[label]?.correct ?? 0,
+      total: updated.accuracy[label]?.total ?? 0,
+    };
 
-  insert.run({
-    id: randomUUID(),
-    userId,
-    label,
-    type: statType,
-    correct: correct ? 1 : 0,
-    total: 1,
-    updatedAt: now,
-  });
-
-  const stat = db
-    .prepare('SELECT label, type, correct, total FROM accuracy_stats WHERE user_id = ? AND label = ? AND type = ?')
-    .get(userId, label, statType);
-
-  return NextResponse.json({ stat });
+    return NextResponse.json({ stat });
+  } catch (error) {
+    console.error('Failed to record accuracy', error);
+    return NextResponse.json({ error: 'Failed to record accuracy' }, { status: 500 });
+  }
 }
 
 export async function GET() {
@@ -60,9 +53,18 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const stats = db
-    .prepare('SELECT label, type, correct, total FROM accuracy_stats WHERE user_id = ? AND type = ?')
-    .all(userId, 'face');
+  try {
+    const data = await loadProgressData(userId);
+    const stats = Object.entries(data.accuracy).map(([label, stat]) => ({
+      label,
+      type: 'face' as const,
+      correct: stat.correct,
+      total: stat.total,
+    }));
 
-  return NextResponse.json({ stats });
+    return NextResponse.json({ stats });
+  } catch (error) {
+    console.error('Failed to load accuracy stats', error);
+    return NextResponse.json({ error: 'Failed to load accuracy stats' }, { status: 500 });
+  }
 }

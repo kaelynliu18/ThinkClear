@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import db from '../../../lib/db';
 import { randomUUID } from 'crypto';
+import {
+  appendProgressEntry,
+  loadProgressData,
+  saveProgressData,
+} from '../../../lib/progressStorage';
 
 export async function POST(req: Request) {
   const user = await currentUser();
@@ -18,14 +22,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { mode, correct, total, playedAt } = body;
+  const { correct, total, playedAt } = body;
   if (typeof correct !== 'number' || typeof total !== 'number') {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
-  }
-
-  const normalizedMode = mode ? mode.toLowerCase() : 'face';
-  if (normalizedMode !== 'face') {
-    return NextResponse.json({ error: 'Unsupported mode' }, { status: 400 });
   }
 
   const played = playedAt ? new Date(playedAt) : new Date();
@@ -33,21 +32,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid playedAt value' }, { status: 400 });
   }
 
-  const now = new Date().toISOString();
-  db.prepare(`
-    INSERT INTO progress_entries (id, user_id, mode, correct, total, played_at, created_at)
-    VALUES (@id, @userId, @mode, @correct, @total, @playedAt, @createdAt)
-  `).run({
-    id: randomUUID(),
-    userId,
-    mode: normalizedMode,
-    correct,
-    total,
-    playedAt: played.toISOString(),
-    createdAt: now,
-  });
+  try {
+    const data = await loadProgressData(userId);
+    const updated = appendProgressEntry(data, {
+      id: randomUUID(),
+      correct,
+      total,
+      playedAt: played.toISOString(),
+    });
 
-  return NextResponse.json({ message: 'Logged' });
+    await saveProgressData(userId, updated);
+    return NextResponse.json({ message: 'Logged' });
+  } catch (error) {
+    console.error('Failed to log progress', error);
+    return NextResponse.json({ error: 'Failed to log progress' }, { status: 500 });
+  }
 }
 
 export async function GET() {
@@ -58,15 +57,18 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const entries = db
-    .prepare(
-      'SELECT id, mode, correct, total, played_at as playedAt FROM progress_entries WHERE user_id = ? AND mode = ? ORDER BY played_at ASC'
-    )
-    .all(userId, 'face');
+  try {
+    const data = await loadProgressData(userId);
+    const accuracyArray = Object.entries(data.accuracy).map(([label, stat]) => ({
+      label,
+      type: 'face' as const,
+      correct: stat.correct,
+      total: stat.total,
+    }));
 
-  const accuracy = db
-    .prepare('SELECT label, type, correct, total FROM accuracy_stats WHERE user_id = ? AND type = ?')
-    .all(userId, 'face');
-
-  return NextResponse.json({ entries, accuracy });
+    return NextResponse.json({ entries: data.entries, accuracy: accuracyArray });
+  } catch (error) {
+    console.error('Failed to load progress', error);
+    return NextResponse.json({ error: 'Failed to load progress' }, { status: 500 });
+  }
 }
