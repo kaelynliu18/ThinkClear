@@ -163,8 +163,8 @@ export default function GamePage() {
     }
   };
 
-  const savePersonAccuracy = (itemName: string, isCorrect: boolean) => {
-    fetch("/api/accuracy", {
+  const savePersonAccuracy = async (itemName: string, isCorrect: boolean) => {
+    await fetch("/api/accuracy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -172,7 +172,7 @@ export default function GamePage() {
     }).catch((error) => console.error("Failed to record accuracy", error));
   };
 
-  const handleSelection = (option: string) => {
+  const handleSelection = async (option: string) => {
     if (roundCleared) return;
     setSelected(option);
 
@@ -185,10 +185,10 @@ export default function GamePage() {
     }
 
     if (!isCorrect) {
-      savePersonAccuracy(option, false);
+      await savePersonAccuracy(option, false);
     }
-    savePersonAccuracy(currentItem.name, isCorrect);
-    logProgress(isCorrect, currentItem.name);
+    await savePersonAccuracy(currentItem.name, isCorrect);
+    await logProgress(isCorrect, currentItem.name);
 
     if (isCorrect) {
       if (!madeMistake) {
