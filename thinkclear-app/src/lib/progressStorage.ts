@@ -31,7 +31,11 @@ function tokenedHeaders() {
 const normalizeLabel = (label: string) => label.trim().toLowerCase();
 
 async function fetchBlobContent(url: string): Promise<string> {
-  const res = await fetch(url, { headers: tokenedHeaders() });
+  const cacheBustedUrl = url.includes('?') ? `${url}&ts=${Date.now()}` : `${url}?ts=${Date.now()}`;
+  const res = await fetch(cacheBustedUrl, {
+    headers: tokenedHeaders(),
+    cache: 'no-store',
+  });
 
   if (!res.ok) {
     throw new Error(`Failed to fetch blob: ${res.status}`);
