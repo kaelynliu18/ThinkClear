@@ -38,7 +38,9 @@ export async function POST(req: Request) {
       total: updated.accuracy[label]?.total ?? 0,
     };
 
-    return NextResponse.json({ stat });
+    const res = NextResponse.json({ stat });
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    return res;
   } catch (error) {
     console.error('Failed to record accuracy', error);
     return NextResponse.json({ error: 'Failed to record accuracy' }, { status: 500 });
@@ -62,7 +64,9 @@ export async function GET() {
       total: stat.total,
     }));
 
-    return NextResponse.json({ stats });
+    const res = NextResponse.json({ stats });
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    return res;
   } catch (error) {
     console.error('Failed to load accuracy stats', error);
     return NextResponse.json({ error: 'Failed to load accuracy stats' }, { status: 500 });

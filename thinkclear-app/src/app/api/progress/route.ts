@@ -43,7 +43,9 @@ export async function POST(req: Request) {
     });
 
     await saveProgressData(userId, updated);
-    return NextResponse.json({ message: 'Logged' });
+    const res = NextResponse.json({ message: 'Logged' });
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    return res;
   } catch (error) {
     console.error('Failed to log progress', error);
     return NextResponse.json({ error: 'Failed to log progress' }, { status: 500 });
@@ -67,7 +69,9 @@ export async function GET() {
       total: stat.total,
     }));
 
-    return NextResponse.json({ entries: data.entries, accuracy: accuracyArray });
+    const res = NextResponse.json({ entries: data.entries, accuracy: accuracyArray });
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    return res;
   } catch (error) {
     console.error('Failed to load progress', error);
     return NextResponse.json({ error: 'Failed to load progress' }, { status: 500 });

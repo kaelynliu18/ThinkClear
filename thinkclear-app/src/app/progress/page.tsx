@@ -34,7 +34,7 @@ export default function ProgressPage() {
   }, []);
 
   const loadProgress = () => {
-    fetch('/api/progress', { credentials: 'include' })
+    fetch('/api/progress', { credentials: 'include', cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (!data || data.error) {
