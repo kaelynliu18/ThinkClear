@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import {
-  loadProgressData,
-  saveProgressData,
-  updateAccuracyStat,
-} from '../../../lib/progressStorage';
+import { getAccuracyStat, loadProgressData, saveProgressData } from '../../../lib/progressStorage';
 
 export async function POST(req: Request) {
   const user = await currentUser();
@@ -28,24 +24,24 @@ export async function POST(req: Request) {
 
   try {
     const data = await loadProgressData(userId);
-    const updated = updateAccuracyStat(data, label, correct);
-    await saveProgressData(userId, updated);
+    const statData = getAccuracyStat(data, label);
 
-    const normalized = label.trim().toLowerCase();
-    const statData = updated.accuracy[normalized];
-    const stat = {
-      label: statData?.label ?? label.trim(),
-      type: 'face' as const,
-      correct: statData?.correct ?? 0,
-      total: statData?.total ?? 0,
-    };
+    // No mutation occurs here because accuracy is derived from entries.
+    await saveProgressData(userId, data);
 
-    const res = NextResponse.json({ stat });
+    const res = NextResponse.json({
+      stat: {
+        label: statData.label,
+        type: 'face' as const,
+        correct: statData.correct,
+        total: statData.total,
+      },
+    });
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return res;
   } catch (error) {
-    console.error('Failed to record accuracy', error);
-    return NextResponse.json({ error: 'Failed to record accuracy' }, { status: 500 });
+    console.error('Failed to load accuracy stats', error);
+    return NextResponse.json({ error: 'Failed to load accuracy stats' }, { status: 500 });
   }
 }
 

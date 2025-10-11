@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { list, put } from '@vercel/blob';
 
 export interface StoredProgressEntry {
@@ -22,11 +23,10 @@ export interface StoredProgressData {
 const PROGRESS_PATH = (userId: string) => `progress/${userId}/progress.json`;
 const PROGRESS_LIMIT = 500;
 
-function tokenedHeaders() {
-  return process.env.BLOB_READ_WRITE_TOKEN
+const tokenedHeaders = () =>
+  process.env.BLOB_READ_WRITE_TOKEN
     ? { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` }
     : undefined;
-}
 
 const normalizeLabel = (label: string) => label.trim().toLowerCase();
 
@@ -52,15 +52,66 @@ async function ensureProgressBlob(userId: string): Promise<void> {
   });
 
   if (existing.blobs.length === 0) {
-    await put(PROGRESS_PATH(userId), JSON.stringify({ entries: [], accuracy: {} }), {
-      access: 'public',
-      contentType: 'application/json',
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
-    });
+    await put(
+      PROGRESS_PATH(userId),
+      JSON.stringify({ entries: [], accuracy: {} }),
+      {
+        access: 'public',
+        contentType: 'application/json',
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+      }
+    );
   }
 }
+
+const normalizeEntry = (entry: Partial<StoredProgressEntry>, fallbackId: string): StoredProgressEntry | null => {
+  const faceRaw = typeof entry.face === 'string' ? entry.face.trim() : '';
+  if (!faceRaw) return null;
+
+  return {
+    id: entry.id ?? fallbackId,
+    face: faceRaw,
+    correct: Number(entry.correct ?? 0),
+    total: Number(entry.total ?? 0) || 0,
+    playedAt: entry.playedAt ?? new Date().toISOString(),
+  };
+};
+
+const computeAccuracy = (entries: StoredProgressEntry[]): Record<string, StoredAccuracyStat> => {
+  return entries.reduce<Record<string, StoredAccuracyStat>>((acc, entry) => {
+    const key = normalizeLabel(entry.face);
+    const display = entry.face.trim();
+    if (!display) return acc;
+
+    const current = acc[key] ?? { label: display, correct: 0, total: 0 };
+    current.label = display;
+    current.correct += entry.correct > 0 ? entry.correct : 0;
+    current.total += entry.total > 0 ? entry.total : 0;
+    acc[key] = current;
+    return acc;
+  }, {});
+};
+
+const normalizeData = (data: StoredProgressData): StoredProgressData => {
+  const entries = (data.entries ?? [])
+    .map((entry, idx) => normalizeEntry(entry, `legacy-${idx}`))
+    .filter((entry): entry is StoredProgressEntry => entry !== null)
+    .map((entry) => ({
+      ...entry,
+      total: entry.total || 1,
+      correct: entry.correct > entry.total ? entry.total : entry.correct,
+    }));
+
+  const limitedEntries = entries.slice(-PROGRESS_LIMIT);
+  const accuracy = computeAccuracy(limitedEntries);
+
+  return {
+    entries: limitedEntries,
+    accuracy,
+  };
+};
 
 export async function loadProgressData(userId: string): Promise<StoredProgressData> {
   await ensureProgressBlob(userId);
@@ -78,22 +129,7 @@ export async function loadProgressData(userId: string): Promise<StoredProgressDa
   try {
     const jsonString = await fetchBlobContent(blobs[0].downloadUrl ?? blobs[0].url);
     const parsed = JSON.parse(jsonString) as StoredProgressData;
-    return {
-      entries: Array.isArray(parsed.entries) ? parsed.entries : [],
-      accuracy:
-        typeof parsed.accuracy === 'object' && parsed.accuracy
-          ? Object.fromEntries(
-              Object.entries(parsed.accuracy).map(([key, value]) => [
-                normalizeLabel(value?.label ?? key),
-                {
-                  label: value?.label ?? key,
-                  correct: Number(value?.correct ?? 0),
-                  total: Number(value?.total ?? 0),
-                },
-              ])
-            )
-          : {},
-    };
+    return normalizeData(parsed);
   } catch (error) {
     console.warn('Failed to parse progress data blob', error);
     return { entries: [], accuracy: {} };
@@ -101,7 +137,8 @@ export async function loadProgressData(userId: string): Promise<StoredProgressDa
 }
 
 export async function saveProgressData(userId: string, data: StoredProgressData) {
-  await put(PROGRESS_PATH(userId), JSON.stringify(data), {
+  const normalized = normalizeData(data);
+  await put(PROGRESS_PATH(userId), JSON.stringify(normalized), {
     access: 'public',
     contentType: 'application/json',
     addRandomSuffix: false,
@@ -114,33 +151,19 @@ export function appendProgressEntry(
   data: StoredProgressData,
   entry: StoredProgressEntry
 ): StoredProgressData {
-  const entries = [...data.entries, entry];
-  const limitedEntries = entries.slice(-PROGRESS_LIMIT);
-  return {
-    ...data,
-    entries: limitedEntries,
-  };
+  const normalizedEntry = normalizeEntry(entry, entry.id ?? randomUUID());
+  if (!normalizedEntry) {
+    return data;
+  }
+
+  const entries = [...(data.entries ?? []), normalizedEntry];
+  const normalized = normalizeData({ entries, accuracy: data.accuracy ?? {} });
+  return normalized;
 }
 
-export function updateAccuracyStat(
-  data: StoredProgressData,
-  label: string,
-  isCorrect: boolean
-): StoredProgressData {
+export function getAccuracyStat(data: StoredProgressData, label: string): StoredAccuracyStat {
   const key = normalizeLabel(label);
-  const displayLabel = label.trim();
-  const current = data.accuracy[key] ?? { label: displayLabel, correct: 0, total: 0 };
-  const next: StoredAccuracyStat = {
-    label: displayLabel,
-    correct: current.correct + (isCorrect ? 1 : 0),
-    total: current.total + 1,
-  };
-
-  return {
-    ...data,
-    accuracy: {
-      ...data.accuracy,
-      [key]: next,
-    },
-  };
+  const stat = data.accuracy[key];
+  const trimmed = label.trim();
+  return stat ?? { label: trimmed, correct: 0, total: 0 };
 }
