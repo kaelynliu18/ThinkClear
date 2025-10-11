@@ -62,8 +62,8 @@ export async function GET() {
 
   try {
     const data = await loadProgressData(userId);
-    const accuracyArray = Object.entries(data.accuracy).map(([label, stat]) => ({
-      label,
+    const accuracyArray = Object.values(data.accuracy).map((stat) => ({
+      label: stat.label,
       type: 'face' as const,
       correct: stat.correct,
       total: stat.total,

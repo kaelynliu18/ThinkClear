@@ -9,6 +9,7 @@ export interface StoredProgressEntry {
 }
 
 export interface StoredAccuracyStat {
+  label: string;
   correct: number;
   total: number;
 }
@@ -26,6 +27,8 @@ function tokenedHeaders() {
     ? { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` }
     : undefined;
 }
+
+const normalizeLabel = (label: string) => label.trim().toLowerCase();
 
 async function fetchBlobContent(url: string): Promise<string> {
   const res = await fetch(url, { headers: tokenedHeaders() });
@@ -73,9 +76,19 @@ export async function loadProgressData(userId: string): Promise<StoredProgressDa
     const parsed = JSON.parse(jsonString) as StoredProgressData;
     return {
       entries: Array.isArray(parsed.entries) ? parsed.entries : [],
-      accuracy: typeof parsed.accuracy === 'object' && parsed.accuracy
-        ? parsed.accuracy
-        : {},
+      accuracy:
+        typeof parsed.accuracy === 'object' && parsed.accuracy
+          ? Object.fromEntries(
+              Object.entries(parsed.accuracy).map(([key, value]) => [
+                normalizeLabel(value?.label ?? key),
+                {
+                  label: value?.label ?? key,
+                  correct: Number(value?.correct ?? 0),
+                  total: Number(value?.total ?? 0),
+                },
+              ])
+            )
+          : {},
     };
   } catch (error) {
     console.warn('Failed to parse progress data blob', error);
@@ -110,8 +123,11 @@ export function updateAccuracyStat(
   label: string,
   isCorrect: boolean
 ): StoredProgressData {
-  const current = data.accuracy[label] ?? { correct: 0, total: 0 };
+  const key = normalizeLabel(label);
+  const displayLabel = label.trim();
+  const current = data.accuracy[key] ?? { label: displayLabel, correct: 0, total: 0 };
   const next: StoredAccuracyStat = {
+    label: displayLabel,
     correct: current.correct + (isCorrect ? 1 : 0),
     total: current.total + 1,
   };
@@ -120,7 +136,7 @@ export function updateAccuracyStat(
     ...data,
     accuracy: {
       ...data.accuracy,
-      [label]: next,
+      [key]: next,
     },
   };
 }

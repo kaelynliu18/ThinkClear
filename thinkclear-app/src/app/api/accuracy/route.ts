@@ -31,11 +31,13 @@ export async function POST(req: Request) {
     const updated = updateAccuracyStat(data, label, correct);
     await saveProgressData(userId, updated);
 
+    const normalized = label.trim().toLowerCase();
+    const statData = updated.accuracy[normalized];
     const stat = {
-      label,
+      label: statData?.label ?? label.trim(),
       type: 'face' as const,
-      correct: updated.accuracy[label]?.correct ?? 0,
-      total: updated.accuracy[label]?.total ?? 0,
+      correct: statData?.correct ?? 0,
+      total: statData?.total ?? 0,
     };
 
     const res = NextResponse.json({ stat });
@@ -57,8 +59,8 @@ export async function GET() {
 
   try {
     const data = await loadProgressData(userId);
-    const stats = Object.entries(data.accuracy).map(([label, stat]) => ({
-      label,
+    const stats = Object.values(data.accuracy).map((stat) => ({
+      label: stat.label,
       type: 'face' as const,
       correct: stat.correct,
       total: stat.total,
