@@ -145,13 +145,14 @@ export default function GamePage() {
     setMadeMistake(false);
   };
 
-  const logProgress = async (isCorrect: boolean) => {
+  const logProgress = async (isCorrect: boolean, faceName: string) => {
     try {
       await fetch("/api/progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
+          face: faceName,
           correct: isCorrect ? 1 : 0,
           total: 1,
           playedAt: new Date().toISOString(),
@@ -184,7 +185,7 @@ export default function GamePage() {
     }
 
     savePersonAccuracy(currentItem.name, isCorrect);
-    logProgress(isCorrect);
+    logProgress(isCorrect, currentItem.name);
 
     if (isCorrect) {
       if (!madeMistake) {

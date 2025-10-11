@@ -5,6 +5,7 @@ import { TrendingUp, Calendar, Target, Users } from "lucide-react";
 
 interface ProgressEntry {
   id: string;
+  face: string;
   correct: number;
   total: number;
   playedAt: string;

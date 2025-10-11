@@ -2,6 +2,7 @@ import { list, put } from '@vercel/blob';
 
 export interface StoredProgressEntry {
   id: string;
+  face: string;
   correct: number;
   total: number;
   playedAt: string;
@@ -20,12 +21,14 @@ export interface StoredProgressData {
 const PROGRESS_PATH = (userId: string) => `progress/${userId}/progress.json`;
 const PROGRESS_LIMIT = 500;
 
+function tokenedHeaders() {
+  return process.env.BLOB_READ_WRITE_TOKEN
+    ? { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` }
+    : undefined;
+}
+
 async function fetchBlobContent(url: string): Promise<string> {
-  const res = await fetch(url, {
-    headers: process.env.BLOB_READ_WRITE_TOKEN
-      ? { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` }
-      : undefined,
-  });
+  const res = await fetch(url, { headers: tokenedHeaders() });
 
   if (!res.ok) {
     throw new Error(`Failed to fetch blob: ${res.status}`);
@@ -34,7 +37,27 @@ async function fetchBlobContent(url: string): Promise<string> {
   return await res.text();
 }
 
+async function ensureProgressBlob(userId: string): Promise<void> {
+  const existing = await list({
+    prefix: PROGRESS_PATH(userId),
+    limit: 1,
+    token: process.env.BLOB_READ_WRITE_TOKEN,
+  });
+
+  if (existing.blobs.length === 0) {
+    await put(PROGRESS_PATH(userId), JSON.stringify({ entries: [], accuracy: {} }), {
+      access: 'public',
+      contentType: 'application/json',
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+  }
+}
+
 export async function loadProgressData(userId: string): Promise<StoredProgressData> {
+  await ensureProgressBlob(userId);
+
   const { blobs } = await list({
     prefix: PROGRESS_PATH(userId),
     limit: 1,

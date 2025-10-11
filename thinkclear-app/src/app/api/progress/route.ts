@@ -15,15 +15,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { mode?: string; correct?: number; total?: number; playedAt?: string };
+  let body: { mode?: string; face?: string; correct?: number; total?: number; playedAt?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { correct, total, playedAt } = body;
-  if (typeof correct !== 'number' || typeof total !== 'number') {
+  const { face, correct, total, playedAt } = body;
+  if (!face || typeof correct !== 'number' || typeof total !== 'number') {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
 
@@ -36,6 +36,7 @@ export async function POST(req: Request) {
     const data = await loadProgressData(userId);
     const updated = appendProgressEntry(data, {
       id: randomUUID(),
+      face,
       correct,
       total,
       playedAt: played.toISOString(),
