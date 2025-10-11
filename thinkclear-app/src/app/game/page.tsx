@@ -184,9 +184,6 @@ export default function GamePage() {
       return;
     }
 
-    if (!isCorrect) {
-      await savePersonAccuracy(option, false);
-    }
     await savePersonAccuracy(currentItem.name, isCorrect);
     await logProgress(isCorrect, currentItem.name);
 
