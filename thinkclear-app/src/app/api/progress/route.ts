@@ -3,6 +3,7 @@ import { currentUser } from '@clerk/nextjs/server';
 import { randomUUID } from 'crypto';
 import {
   appendProgressEntry,
+  computeAccuracyFromEntries,
   loadProgressData,
   saveProgressData,
 } from '../../../lib/progressStorage';
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { mode?: string; face?: string; correct?: number; total?: number; playedAt?: string };
+  let body: { face?: string; correct?: number; total?: number; playedAt?: string };
   try {
     body = await req.json();
   } catch {
@@ -43,6 +44,7 @@ export async function POST(req: Request) {
     });
 
     await saveProgressData(userId, updated);
+
     const res = NextResponse.json({ message: 'Logged' });
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return res;
@@ -62,7 +64,8 @@ export async function GET() {
 
   try {
     const data = await loadProgressData(userId);
-    const accuracyArray = Object.values(data.accuracy).map((stat) => ({
+    const accuracyMap = computeAccuracyFromEntries(data.entries);
+    const accuracyArray = Object.values(accuracyMap).map((stat) => ({
       label: stat.label,
       type: 'face' as const,
       correct: stat.correct,

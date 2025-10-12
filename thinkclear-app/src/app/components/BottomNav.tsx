@@ -1,5 +1,4 @@
 "use client";
-import { SignedIn, UserButton } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 
 export default function BottomNav() {
@@ -12,9 +11,6 @@ export default function BottomNav() {
         <a href="/game" className={`px-3 py-1 rounded-lg transition-all duration-150 ${pathname === "/game" ? "text-blue-600 border-b-4 border-blue-500 bg-blue-50 shadow font-bold" : "hover:text-blue-600 hover:bg-blue-50"}`}>Game</a>
         <a href="/journal" className={`px-3 py-1 rounded-lg transition-all duration-150 ${pathname === "/journal" ? "text-blue-600 border-b-4 border-blue-500 bg-blue-50 shadow font-bold" : "hover:text-blue-600 hover:bg-blue-50"}`}>Journal</a>
         <a href="/progress" className={`px-3 py-1 rounded-lg transition-all duration-150 ${pathname === "/progress" ? "text-blue-600 border-b-4 border-blue-500 bg-blue-50 shadow font-bold" : "hover:text-blue-600 hover:bg-blue-50"}`}>Progress</a>
-        <SignedIn>
-          <UserButton appearance={{ elements: { avatarBox: "w-9 h-9 border border-blue-200 shadow" } }} afterSignOutUrl="/sign-in" />
-        </SignedIn>
       </nav>
     </footer>
   );

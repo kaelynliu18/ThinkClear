@@ -34,7 +34,7 @@ export default function ProgressPage() {
   }, []);
 
   const loadProgress = () => {
-    fetch('/api/progress', { credentials: 'include', cache: 'no-store' })
+    fetch('/api/progress', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (!data || data.error) {
@@ -160,16 +160,19 @@ export default function ProgressPage() {
                   <div className="space-y-3">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Correct Matches:</span>
-                      <span className="font-bold text-blue-600">{todayStats.correctCount}/10</span>
+                      <span className="font-bold text-blue-600">{todayStats.correctCount}/{todayStats.totalAttempts}</span>
                     </div>
                     <div className="w-full bg-blue-100 rounded-full h-3">
                       <div 
                         className="bg-gradient-to-r from-blue-400 to-blue-600 h-3 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min((todayStats.correctCount / 10) * 100, 100)}%` }}
+                        style={{ width: `${todayStats.totalAttempts > 0 ? (todayStats.correctCount / todayStats.totalAttempts) * 100 : 0}%` }}
                       ></div>
                     </div>
                     <div className="text-sm text-gray-500">
                       {todayStats.totalAttempts > 0 ? `${todayStats.totalAttempts} attempts today` : 'No attempts yet'}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {todayStats.totalAttempts > 0 ? `Accuracy: ${Math.round((todayStats.correctCount / todayStats.totalAttempts) * 100)}%` : 'No accuracy data'}
                     </div>
                   </div>
                 </div>
@@ -184,6 +187,16 @@ export default function ProgressPage() {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Total Correct:</span>
                       <span className="font-bold text-pink-600">{monthlyStats.totalCorrect}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total Attempts:</span>
+                      <span className="font-bold text-pink-600">{monthlyStats.totalAttempts}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Overall Accuracy:</span>
+                      <span className="font-bold text-pink-600">
+                        {monthlyStats.totalAttempts > 0 ? Math.round((monthlyStats.totalCorrect / monthlyStats.totalAttempts) * 100) : 0}%
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Days Played:</span>

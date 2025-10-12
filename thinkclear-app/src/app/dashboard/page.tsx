@@ -1,13 +1,11 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
 import { Card, CardContent } from "../../components/ui/card";
 import { Users, Brain, BookOpen, Settings, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
 export default function DashboardPage() {
-  const { user } = useUser();
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-gradient-to-b from-[#e2f0ff] to-[#ffe5f0] p-6 pb-24 text-center">
@@ -16,7 +14,7 @@ export default function DashboardPage() {
           <img src="/think-logo.png" alt="ThinkClear Logo" width={140} className="mx-auto mb-4 drop-shadow-lg" />
           <h1 className="text-4xl font-extrabold tracking-widest text-blue-700 drop-shadow mb-2">THIΛK Clear</h1>
           <p className="text-base text-blue-500 italic mb-2">for every face that matters</p>
-          <p className="text-sm text-gray-500">Welcome back{user?.firstName ? `, ${user.firstName}` : ""}!</p>
+          <p className="text-sm text-gray-500">Welcome back!</p>
         </div>
 
         {/* Cards Section */}

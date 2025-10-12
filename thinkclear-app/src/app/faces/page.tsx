@@ -21,9 +21,7 @@ export default function FacesPage() {
 
   const loadFaces = async () => {
     try {
-      const res = await fetch("/api/faces", {
-        credentials: "include",
-      });
+      const res = await fetch("/api/faces");
       const json = await res.json();
 
       if (!res.ok) {
@@ -51,7 +49,6 @@ export default function FacesPage() {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: person, file: image }),
-        credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to delete");
       await loadFaces();
@@ -75,11 +72,10 @@ export default function FacesPage() {
     formData.append("file", file);
 
     try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Upload failed");
       // success → close modal and reset

@@ -79,7 +79,9 @@ const normalizeEntry = (entry: Partial<StoredProgressEntry>, fallbackId: string)
   };
 };
 
-const computeAccuracy = (entries: StoredProgressEntry[]): Record<string, StoredAccuracyStat> => {
+export const computeAccuracyFromEntries = (
+  entries: StoredProgressEntry[]
+): Record<string, StoredAccuracyStat> => {
   return entries.reduce<Record<string, StoredAccuracyStat>>((acc, entry) => {
     const key = normalizeLabel(entry.face);
     const display = entry.face.trim();
@@ -105,7 +107,7 @@ const normalizeData = (data: StoredProgressData): StoredProgressData => {
     }));
 
   const limitedEntries = entries.slice(-PROGRESS_LIMIT);
-  const accuracy = computeAccuracy(limitedEntries);
+  const accuracy = computeAccuracyFromEntries(limitedEntries);
 
   return {
     entries: limitedEntries,

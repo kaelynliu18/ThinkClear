@@ -40,9 +40,7 @@ export default function GamePage() {
 
   const loadFaces = async () => {
     try {
-      const response = await fetch("/api/faces", {
-        credentials: "include",
-      });
+      const response = await fetch("/api/faces");
       const data: PeopleData | { error?: string } = await response.json();
 
       if (!response.ok || !data || typeof data !== "object" || Array.isArray(data)) {
@@ -150,7 +148,6 @@ export default function GamePage() {
       await fetch("/api/progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           face: faceName,
           correct: isCorrect ? 1 : 0,

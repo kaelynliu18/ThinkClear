@@ -1,0 +1,37 @@
+{
+  "entries": [
+    {
+      "id": "665d78ce-16b9-4280-828d-cad2e91cc6db",
+      "face": "Test Person",
+      "correct": 1,
+      "total": 1,
+      "playedAt": "2024-01-15T10:00:00.000Z"
+    },
+    {
+      "id": "734b63d1-0d5d-4e7c-9131-a16ad69ab8c7",
+      "face": "Test Person",
+      "correct": 0,
+      "total": 1,
+      "playedAt": "2024-01-15T11:00:00.000Z"
+    },
+    {
+      "id": "134e5b02-1bda-49be-8f9b-a88c03f2dbef",
+      "face": "Another Person",
+      "correct": 1,
+      "total": 1,
+      "playedAt": "2024-01-15T12:00:00.000Z"
+    }
+  ],
+  "accuracy": {
+    "test person": {
+      "label": "Test Person",
+      "correct": 1,
+      "total": 2
+    },
+    "another person": {
+      "label": "Another Person",
+      "correct": 1,
+      "total": 1
+    }
+  }
+}
