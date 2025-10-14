@@ -15,7 +15,9 @@ export async function GET() {
   }
 
   const entries = await loadJournalEntries(userId);
-  return NextResponse.json({ entries });
+  const res = NextResponse.json({ entries });
+  res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  return res;
 }
 
 export async function POST(req: Request) {
@@ -48,7 +50,9 @@ export async function POST(req: Request) {
     entryDate: entry.toISOString(),
   });
 
-  return NextResponse.json({ id: saved.id });
+  const res = NextResponse.json({ entry: saved });
+  res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  return res;
 }
 
 export async function DELETE(req: Request) {

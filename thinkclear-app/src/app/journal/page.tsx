@@ -32,7 +32,7 @@ export default function JournalPage() {
   }, [isLoaded, isSignedIn]);
 
   const loadPastEntries = () => {
-    fetch('/api/journal', { credentials: 'include' })
+    fetch('/api/journal', { credentials: 'include', cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (!data || data.error) {
@@ -67,7 +67,19 @@ export default function JournalPage() {
             setEntry('');
             setSaved(true);
             setTimeout(() => setSaved(false), 2000);
-            loadPastEntries();
+            if (result.entry) {
+              setPastEntries((prev) => [
+                {
+                  id: result.entry.id,
+                  content: result.entry.content,
+                  entryDate: result.entry.entryDate,
+                  createdAt: result.entry.createdAt,
+                },
+                ...prev,
+              ]);
+            } else {
+              loadPastEntries();
+            }
           } else {
             alert('Failed to save entry.');
           }
