@@ -20,6 +20,7 @@ export default function FacesPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadFaces = async () => {
@@ -41,6 +42,7 @@ export default function FacesPage() {
       setFaces({});
       setInitialLoading(false);
     }
+    setSyncing(false);
   };
 
   useEffect(() => {
@@ -102,6 +104,7 @@ export default function FacesPage() {
       setRelationship("");
       setFile(null);
       fileInputRef.current!.value = "";
+      setSyncing(true);
       await loadFaces();
     } catch (err: any) {
       setError(err.message);
@@ -112,6 +115,15 @@ export default function FacesPage() {
 
   return (
     <main className="min-h-screen p-6 pb-12 bg-gradient-to-b from-[#e2f0ff] to-[#ffe5f0]">
+      {syncing && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-white/80 backdrop-blur">
+          <div className="bg-white rounded-2xl shadow-2xl px-8 py-6 text-center">
+            <div className="animate-spin h-10 w-10 border-4 border-blue-200 border-t-blue-500 rounded-full mx-auto mb-4"></div>
+            <p className="text-blue-600 font-semibold">Processing your update...</p>
+            <p className="text-sm text-blue-400">This can take a few seconds.</p>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col items-center mb-8">
         <h1 className="text-4xl font-extrabold text-blue-700 drop-shadow-lg tracking-wide mb-4">Faces Gallery</h1>
         {isSignedIn ? (
