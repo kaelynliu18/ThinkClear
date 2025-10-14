@@ -42,7 +42,17 @@ export default function FacesPage() {
       setFaces({});
       setInitialLoading(false);
     }
-    setSyncing(false);
+  };
+
+  const refreshDependentData = async () => {
+    try {
+      await Promise.all([
+        fetch("/api/faces", { cache: "no-store" }).catch(() => undefined),
+        fetch("/api/progress", { cache: "no-store", credentials: "include" }).catch(() => undefined),
+      ]);
+    } catch (err) {
+      console.warn("Failed to refresh related data", err);
+    }
   };
 
   useEffect(() => {
@@ -106,10 +116,12 @@ export default function FacesPage() {
       fileInputRef.current!.value = "";
       setSyncing(true);
       await loadFaces();
+      await refreshDependentData();
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
+      setSyncing(false);
     }
   };
 

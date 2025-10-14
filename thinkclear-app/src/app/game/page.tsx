@@ -41,7 +41,7 @@ export default function GamePage() {
 
   const loadFaces = async () => {
     try {
-      const response = await fetch("/api/faces");
+      const response = await fetch("/api/faces", { cache: "no-store" });
       const data: PeopleData | { error?: string } = await response.json();
 
       if (!response.ok || !data || typeof data !== "object" || Array.isArray(data)) {
