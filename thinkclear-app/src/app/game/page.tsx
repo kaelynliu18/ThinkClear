@@ -21,7 +21,6 @@ interface GameItem {
 export default function GamePage() {
   const router = useRouter();
   const [people, setPeople] = useState<GameItem[]>([]);
-  const [gameStarted, setGameStarted] = useState(false);
   const [gameItems, setGameItems] = useState<GameItem[]>([]);
   const [remainingItems, setRemainingItems] = useState<GameItem[]>([]);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
@@ -60,6 +59,8 @@ export default function GamePage() {
 
       setPeople(peopleArray);
       setLoading(false);
+
+      startGame(peopleArray);
     } catch (error) {
       console.error("Failed to load faces:", error);
       setPeople([]);
@@ -76,11 +77,26 @@ export default function GamePage() {
     return newArray;
   };
 
-  const startGame = () => {
-    const items = people.map((person) => ({ ...person }));
+  const startGame = (sourceItems?: GameItem[]) => {
+    const baseItems = sourceItems ?? people;
+    const items = baseItems.map((person) => ({ ...person }));
+
+    if (items.length === 0) {
+      setGameItems([]);
+      setRemainingItems([]);
+      setCorrectCount(0);
+      setCurrentItemIndex(0);
+      setShuffledOptions([]);
+      setSelected(null);
+      setMessage("");
+      setShowHint(false);
+      setRoundCleared(false);
+      setMadeMistake(false);
+      return;
+    }
+
     setGameItems(items);
     setRemainingItems(shuffleArray(items));
-    setGameStarted(true);
     setCorrectCount(0);
     setCurrentItemIndex(0);
     setShuffledOptions([]);
@@ -92,17 +108,7 @@ export default function GamePage() {
   };
 
   const resetGame = () => {
-    setGameStarted(false);
-    setGameItems([]);
-    setRemainingItems([]);
-    setCorrectCount(0);
-    setCurrentItemIndex(0);
-    setShuffledOptions([]);
-    setSelected(null);
-    setMessage("");
-    setShowHint(false);
-    setRoundCleared(false);
-    setMadeMistake(false);
+    startGame();
   };
 
   useEffect(() => {
@@ -196,33 +202,7 @@ export default function GamePage() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-blue-700 font-semibold">Loading faces...</p>
           </div>
-        ) : !gameStarted ? (
-          <div className="text-center py-12">
-            <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/20">
-              <h2 className="text-3xl font-extrabold text-blue-700 mb-2 drop-shadow-lg">Face Matching Game</h2>
-              <p className="text-gray-600 mb-6 text-lg">Match the people in your gallery.</p>
-
-              <button
-                onClick={startGame}
-                disabled={people.length === 0}
-                className="group w-full relative overflow-hidden px-8 py-6 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 text-white rounded-3xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-xl"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                <div className="relative flex items-center justify-center">
-                  <div className="bg-white/20 rounded-full p-3 mr-4 backdrop-blur-sm">
-                    <Users className="w-8 h-8" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-2xl font-bold mb-1">Start Face Mode</div>
-                    <div className="text-blue-100 text-sm">
-                      {people.length === 0 ? "Add faces to begin" : "Match people from your gallery"}
-                    </div>
-                  </div>
-                </div>
-              </button>
-            </div>
-          </div>
-        ) : gameItems.length === 0 ? (
+        ) : people.length === 0 ? (
           <div className="text-center py-12">
             <div className="bg-white/80 rounded-3xl shadow-2xl p-8">
               <h2 className="text-2xl font-extrabold text-blue-700 mb-4">No Faces Available</h2>
@@ -233,6 +213,13 @@ export default function GamePage() {
               >
                 Go to Faces Gallery
               </button>
+            </div>
+          </div>
+        ) : gameItems.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="bg-white/80 rounded-3xl shadow-2xl p-8">
+              <h2 className="text-2xl font-extrabold text-blue-700 mb-4">Preparing Game</h2>
+              <p className="text-gray-600">Setting up your next round...</p>
             </div>
           </div>
         ) : (
