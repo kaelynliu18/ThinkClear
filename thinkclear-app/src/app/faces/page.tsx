@@ -142,7 +142,7 @@ export default function FacesPage() {
                 </button>
               )}
                <img
-                 src={`/${images[0]}`}
+                 src={images[0].startsWith('http') ? images[0] : `/${images[0]}`}
                  alt={person}
                  className="w-32 h-32 object-cover rounded-full border-4 border-blue-200 shadow mb-4"
                />
