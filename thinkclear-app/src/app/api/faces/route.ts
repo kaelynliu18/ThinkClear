@@ -47,15 +47,21 @@ export async function GET() {
 
   if (!userId) {
     const defaultFaces = loadDefaultFaces();
-    return NextResponse.json(defaultFaces);
+    const res = NextResponse.json(defaultFaces);
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    return res;
   }
 
   try {
     const metadata = await loadFaceMetadata(userId);
-    return NextResponse.json(metadata);
+    const res = NextResponse.json(metadata);
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    return res;
   } catch (error) {
     console.error('Failed to load faces metadata', error);
     const defaultFaces = loadDefaultFaces();
-    return NextResponse.json(defaultFaces);
+    const res = NextResponse.json(defaultFaces);
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    return res;
   }
 }
