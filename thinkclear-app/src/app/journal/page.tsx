@@ -86,7 +86,12 @@ export default function JournalPage() {
       credentials: 'include',
       body: JSON.stringify({ id }),
     })
-      .then(() => loadPastEntries())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('Failed to delete entry');
+        }
+        setPastEntries((prev) => prev.filter((entry) => entry.id !== id));
+      })
       .catch((error) => {
         console.error('Failed to delete journal entry', error);
         alert('Failed to delete entry.');
