@@ -1,6 +1,7 @@
 // src/app/layout.tsx
 import './global.css';
 import { ClerkProvider, SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
+import { Analytics } from '@vercel/analytics/react';
 import { Inter } from 'next/font/google';
 import ClientFooter from "./components/ClientFooter";
 
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {children}
             </main>
             <ClientFooter />
+            <Analytics />
           </div>
         </body>
       </ClerkProvider>
