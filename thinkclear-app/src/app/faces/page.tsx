@@ -57,7 +57,19 @@ export default function FacesPage() {
         body: JSON.stringify({ name: person, file: image }),
       });
       if (!res.ok) throw new Error("Failed to delete");
-      await loadFaces();
+      setFaces((prev) => {
+        const next = { ...prev };
+        const entry = next[person];
+        if (!entry) return next;
+
+        const remaining = entry.images.filter((url) => url !== image);
+        if (remaining.length === 0) {
+          delete next[person];
+        } else {
+          next[person] = { ...entry, images: remaining };
+        }
+        return next;
+      });
     } catch (err) {
       alert("Could not delete face.");
     }
