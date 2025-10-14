@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import db from '../../../lib/db';
-import { randomUUID } from 'crypto';
+import {
+  appendJournalEntry,
+  loadJournalEntries,
+  removeJournalEntry,
+} from '../../../lib/journalStorage';
 
 export async function GET() {
   const user = await currentUser();
@@ -11,10 +14,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const entries = db
-    .prepare('SELECT id, content, entry_date as entryDate, created_at as createdAt, updated_at as updatedAt FROM journal_entries WHERE user_id = ? ORDER BY entry_date DESC, created_at DESC')
-    .all(userId);
-
+  const entries = await loadJournalEntries(userId);
   return NextResponse.json({ entries });
 }
 
@@ -43,14 +43,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid entryDate value' }, { status: 400 });
   }
 
-  const now = new Date().toISOString();
-  const id = randomUUID();
-  db.prepare(`
-    INSERT INTO journal_entries (id, user_id, content, entry_date, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(id, userId, content, entry.toISOString(), now, now);
+  const saved = await appendJournalEntry(userId, {
+    content,
+    entryDate: entry.toISOString(),
+  });
 
-  return NextResponse.json({ id });
+  return NextResponse.json({ id: saved.id });
 }
 
 export async function DELETE(req: Request) {
@@ -72,7 +70,6 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: 'Missing entry id' }, { status: 400 });
   }
 
-  db.prepare('DELETE FROM journal_entries WHERE id = ? AND user_id = ?').run(body.id, userId);
-
+  await removeJournalEntry(userId, body.id);
   return NextResponse.json({ message: 'Deleted' });
 }
