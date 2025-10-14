@@ -169,3 +169,14 @@ export function getAccuracyStat(data: StoredProgressData, label: string): Stored
   const trimmed = label.trim();
   return stat ?? { label: trimmed, correct: 0, total: 0 };
 }
+
+export async function removeProgressForFace(userId: string, faceLabel: string) {
+  const data = await loadProgressData(userId);
+  const filtered = data.entries.filter((entry) => entry.face !== faceLabel);
+
+  if (filtered.length === data.entries.length) {
+    return;
+  }
+
+  await saveProgressData(userId, { entries: filtered, accuracy: data.accuracy });
+}

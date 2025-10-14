@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { del } from '@vercel/blob';
 import { loadFaceMetadata, saveFaceMetadata } from '../../../lib/faceStorage';
+import { removeProgressForFace } from '../../../lib/progressStorage';
 
 export async function DELETE(req: Request) {
   const user = await currentUser();
@@ -31,7 +32,8 @@ export async function DELETE(req: Request) {
     }
 
     entry.images = entry.images.filter((url) => url !== file);
-    if (entry.images.length === 0) {
+    const faceRemoved = entry.images.length === 0;
+    if (faceRemoved) {
       delete metadata[name];
     }
 
@@ -40,6 +42,11 @@ export async function DELETE(req: Request) {
     });
 
     await saveFaceMetadata(userId, metadata);
+
+    if (faceRemoved) {
+      await removeProgressForFace(userId, name);
+    }
+
     return NextResponse.json({ message: 'Delete successful' });
   } catch (error) {
     console.error('Failed to delete face', error);
