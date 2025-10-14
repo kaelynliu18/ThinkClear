@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     }
   }
 
-  finalBuffer = await sharp(finalBuffer).jpeg({ quality: 90 }).toBuffer();
+  finalBuffer = await sharp(finalBuffer).rotate().jpeg({ quality: 90 }).toBuffer();
   finalExt = 'jpg';
 
   const safeName = name.replace(/\s+/g, '_').toLowerCase();
