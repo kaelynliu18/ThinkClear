@@ -1,22 +1,22 @@
 {
   "Hangyul": {
-    "relationship": "Co-founder",
+    "relationship": "Head of Hardware & Prototyping",
     "images": ["hangyul.png"]
   },
   "Isaac": {
-    "relationship": "Co-founder", 
+    "relationship": "Operations & Systems Lead", 
     "images": ["isaac.png"]
   },
   "Kaelyn": {
-    "relationship": "Co-founder",
+    "relationship": "Lead AI Engineer",
     "images": ["kaelyn.png"]
   },
   "Tanuj": {
-    "relationship": "Co-founder",
+    "relationship": "Full-Stack & Web Lead",
     "images": ["tanuj.png"]
   },
   "Vedant": {
-    "relationship": "Co-founder",
+    "relationship": "Marketing & Partnerships Lead",
     "images": ["vedant.png"]
   }
 }
