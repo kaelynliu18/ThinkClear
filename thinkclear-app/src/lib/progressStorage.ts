@@ -178,5 +178,6 @@ export async function removeProgressForFace(userId: string, faceLabel: string) {
     return;
   }
 
-  await saveProgressData(userId, { entries: filtered, accuracy: data.accuracy });
+  const normalized = normalizeData({ entries: filtered, accuracy: {} });
+  await saveProgressData(userId, normalized);
 }

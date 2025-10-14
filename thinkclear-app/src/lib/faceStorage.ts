@@ -4,17 +4,17 @@ export type FaceMetadata = Record<string, { relationship: string; images: string
 
 const metadataPathFor = (userId: string) => `faces/${userId}/faces.json`;
 
-const tokenedHeaders = () =>
+const authHeaders = () =>
   process.env.BLOB_READ_WRITE_TOKEN
     ? { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` }
     : undefined;
 
 async function fetchBlobContent(downloadUrl: string): Promise<string> {
-  const cacheBustedUrl = downloadUrl.includes('?')
+  const cacheBusted = downloadUrl.includes('?')
     ? `${downloadUrl}&ts=${Date.now()}`
     : `${downloadUrl}?ts=${Date.now()}`;
-  const res = await fetch(cacheBustedUrl, {
-    headers: tokenedHeaders(),
+  const res = await fetch(cacheBusted, {
+    headers: authHeaders(),
     cache: 'no-store',
   });
   if (!res.ok) {

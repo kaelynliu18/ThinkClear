@@ -24,7 +24,7 @@ export default function FacesPage() {
 
   const loadFaces = async () => {
     try {
-      const res = await fetch("/api/faces");
+      const res = await fetch("/api/faces", { cache: "no-store" });
       const json = await res.json();
 
       if (!res.ok) {
