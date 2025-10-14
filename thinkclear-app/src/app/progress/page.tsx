@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { TrendingUp, Calendar, Target, Users } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
 
 interface ProgressEntry {
   id: string;
@@ -24,6 +25,7 @@ interface DailyStat {
 }
 
 export default function ProgressPage() {
+  const { isSignedIn } = useAuth();
   const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [personAccuracy, setPersonAccuracy] = useState<AccuracyItem[]>([]);
@@ -141,7 +143,22 @@ export default function ProgressPage() {
           <p className="text-lg text-blue-500 italic">Track your memory game performance</p>
         </div>
 
-        {loading ? (
+        {!isSignedIn ? (
+          <div className="text-center py-12">
+            <div className="bg-white/90 rounded-3xl shadow-2xl p-8 max-w-md mx-auto">
+              <h2 className="text-2xl font-extrabold text-blue-700 mb-4">Sign In to Track Progress</h2>
+              <p className="text-gray-600 mb-6">
+                Sign in to track your memory game performance and see detailed analytics!
+              </p>
+              <button
+                onClick={() => window.location.href = '/dashboard'}
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-pink-400 text-white rounded-full font-semibold shadow hover:from-blue-600 hover:to-pink-500 transition-transform transform hover:scale-105"
+              >
+                Sign In
+              </button>
+            </div>
+          </div>
+        ) : loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-blue-700 font-semibold">Loading progress data...</p>

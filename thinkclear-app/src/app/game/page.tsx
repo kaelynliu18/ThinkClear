@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Users } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
 
 interface FaceData {
   relationship: string;
@@ -20,6 +21,7 @@ interface GameItem {
 
 export default function GamePage() {
   const router = useRouter();
+  const { isSignedIn } = useAuth();
   const [people, setPeople] = useState<GameItem[]>([]);
   const [gameItems, setGameItems] = useState<GameItem[]>([]);
   const [remainingItems, setRemainingItems] = useState<GameItem[]>([]);
@@ -206,13 +208,28 @@ export default function GamePage() {
           <div className="text-center py-12">
             <div className="bg-white/80 rounded-3xl shadow-2xl p-8">
               <h2 className="text-2xl font-extrabold text-blue-700 mb-4">No Faces Available</h2>
-              <p className="text-gray-600 mb-6">Add faces to your gallery first to play the memory game!</p>
-              <button
-                onClick={() => router.push("/faces")}
-                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-pink-400 text-white rounded-full font-semibold shadow hover:from-blue-600 hover:to-pink-500 transition-transform transform hover:scale-105"
-              >
-                Go to Faces Gallery
-              </button>
+              <p className="text-gray-600 mb-6">
+                {isSignedIn 
+                  ? "Add some faces to your gallery to start playing!" 
+                  : "Sign in to add your own faces, or play with the ThinkClear founders!"
+                }
+              </p>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => router.push("/faces")}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-pink-400 text-white rounded-full font-semibold shadow hover:from-blue-600 hover:to-pink-500 transition-transform transform hover:scale-105"
+                >
+                  {isSignedIn ? "Go to Faces Gallery" : "View Founders"}
+                </button>
+                {!isSignedIn && (
+                  <button
+                    onClick={() => router.push("/dashboard")}
+                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-blue-400 text-white rounded-full font-semibold shadow hover:from-green-600 hover:to-blue-500 transition-transform transform hover:scale-105"
+                  >
+                    Sign In
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ) : gameItems.length === 0 ? (

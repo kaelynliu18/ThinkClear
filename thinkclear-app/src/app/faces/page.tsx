@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, FormEvent } from "react";
 import { Trash2 } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
 
 type Face = {
   relationship: string;
@@ -10,6 +11,7 @@ type Face = {
 type FacesData = Record<string, Face>;
 
 export default function FacesPage() {
+  const { isSignedIn } = useAuth();
   const [faces, setFaces] = useState<FacesData>({});
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
@@ -17,6 +19,7 @@ export default function FacesPage() {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadFaces = async () => {
@@ -27,13 +30,16 @@ export default function FacesPage() {
       if (!res.ok) {
         console.error("Failed to load faces:", json?.error);
         setFaces({});
+        setInitialLoading(false);
         return;
       }
 
       setFaces(json ?? {});
+      setInitialLoading(false);
     } catch (err) {
       console.error("Failed to load faces", err);
       setFaces({});
+      setInitialLoading(false);
     }
   };
 
@@ -96,16 +102,27 @@ export default function FacesPage() {
     <main className="min-h-screen p-6 pb-12 bg-gradient-to-b from-[#e2f0ff] to-[#ffe5f0]">
       <div className="flex flex-col items-center mb-8">
         <h1 className="text-4xl font-extrabold text-blue-700 drop-shadow-lg tracking-wide mb-4">Faces Gallery</h1>
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-6 py-2 bg-gradient-to-r from-blue-500 to-pink-400 text-white text-lg font-semibold rounded-full shadow-lg hover:from-blue-600 hover:to-pink-500 transition-transform transform hover:scale-105 mb-2"
-        >
-          + Add New Face
-        </button>
-      </div>
+        {isSignedIn ? (
+          <button
+            onClick={() => setShowModal(true)}
+            className="px-6 py-2 bg-gradient-to-r from-blue-500 to-pink-400 text-white text-lg font-semibold rounded-full shadow-lg hover:from-blue-600 hover:to-pink-500 transition-transform transform hover:scale-105 mb-2"
+          >
+            + Add New Face
+          </button>
+        ) : (
+          <p className="text-blue-500 text-sm">
+            Sign in to add your own faces. Playing as a guest loads the ThinkClear founders by default.
+          </p>
+        )}
+        </div>
 
-      {/* Gallery grid */}
-      {Object.keys(faces).length === 0 ? (
+        {/* Gallery grid */}
+        {initialLoading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-blue-700 font-semibold">Loading faces...</p>
+          </div>
+        ) : Object.keys(faces).length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-blue-400">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
           <p className="text-lg font-semibold mb-2">No faces yet.</p>
@@ -115,18 +132,20 @@ export default function FacesPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
           {Object.entries(faces).map(([person, { relationship, images }]) => (
             <div key={person} className="bg-white border border-blue-100 rounded-2xl shadow-lg p-6 flex flex-col items-center relative transition-transform transform hover:scale-105 hover:shadow-2xl">
-              <button
-                className="absolute top-3 right-3 text-red-400 hover:text-red-600 bg-white/80 rounded-full p-1 shadow"
-                title="Delete face"
-                onClick={() => handleDelete(person, images[0])}
-              >
-                <Trash2 size={20} />
-              </button>
-              <img
-                src={images[0]}
-                alt={person}
-                className="w-32 h-32 object-cover rounded-full border-4 border-blue-200 shadow mb-4"
-              />
+              {isSignedIn && (
+                <button
+                  className="absolute top-3 right-3 text-red-400 hover:text-red-600 bg-white/80 rounded-full p-1 shadow"
+                  title="Delete face"
+                  onClick={() => handleDelete(person, images[0])}
+                >
+                  <Trash2 size={20} />
+                </button>
+              )}
+               <img
+                 src={`/faces-data/${images[0]}`}
+                 alt={person}
+                 className="w-32 h-32 object-cover rounded-full border-4 border-blue-200 shadow mb-4"
+               />
               <h2 className="mt-2 font-bold text-lg text-blue-700">{person}</h2>
               <p className="text-sm text-blue-500">{relationship}</p>
             </div>
@@ -135,7 +154,7 @@ export default function FacesPage() {
       )}
 
       {/* Modal */}
-      {showModal && (
+      {isSignedIn && showModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
           onClick={() => setShowModal(false)}
