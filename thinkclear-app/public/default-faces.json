@@ -1,22 +1,22 @@
 {
-  "Hangyl": {
-    "relationship": "Co-founder & CEO",
-    "images": ["Hangyl-1752811845862.png"]
+  "Hangyul": {
+    "relationship": "Co-founder",
+    "images": ["hangyul.png"]
   },
   "Isaac": {
-    "relationship": "Co-founder & CTO", 
-    "images": ["isaac_1752987515197.jpg"]
+    "relationship": "Co-founder", 
+    "images": ["isaac.png"]
   },
   "Kaelyn": {
-    "relationship": "Co-founder & Head of Design",
-    "images": ["kaelyn_1752939468706.jpg"]
+    "relationship": "Co-founder",
+    "images": ["kaelyn.png"]
   },
   "Tanuj": {
-    "relationship": "Co-founder & Head of Product",
-    "images": ["Tanuj-1752812456575.png"]
+    "relationship": "Co-founder",
+    "images": ["tanuj.png"]
   },
   "Vedant": {
-    "relationship": "Co-founder & Head of Engineering",
-    "images": ["vedant_1752839826214.jpg"]
+    "relationship": "Co-founder",
+    "images": ["vedant.png"]
   }
 }
