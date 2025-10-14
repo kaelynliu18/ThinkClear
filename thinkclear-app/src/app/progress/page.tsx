@@ -151,7 +151,7 @@ export default function ProgressPage() {
                 Sign in to track your memory game performance and see detailed analytics!
               </p>
               <button
-                onClick={() => window.location.href = '/dashboard'}
+                onClick={() => (window.location.href = '/sign-in?redirect_url=/progress')}
                 className="px-6 py-3 bg-gradient-to-r from-blue-500 to-pink-400 text-white rounded-full font-semibold shadow hover:from-blue-600 hover:to-pink-500 transition-transform transform hover:scale-105"
               >
                 Sign In
