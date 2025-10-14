@@ -12,20 +12,24 @@ interface JournalEntry {
 }
 
 export default function JournalPage() {
-  const { isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const [entry, setEntry] = useState("");
   const [saved, setSaved] = useState(false);
   const [showPastEntries, setShowPastEntries] = useState(false);
   const [pastEntries, setPastEntries] = useState<JournalEntry[]>([]);
 
   useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
     if (isSignedIn) {
       loadPastEntries();
     } else {
       setPastEntries([]);
       setShowPastEntries(false);
     }
-  }, [isSignedIn]);
+  }, [isLoaded, isSignedIn]);
 
   const loadPastEntries = () => {
     fetch('/api/journal', { credentials: 'include' })
@@ -93,18 +97,23 @@ export default function JournalPage() {
     <div className="min-h-screen bg-gradient-to-b from-[#e2f0ff] to-[#ffe5f0] p-6 pb-24">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold text-blue-700 drop-shadow-lg tracking-wide mb-4">Daily Journal</h1>
-          <p className="text-lg text-blue-500 italic">Record your thoughts and memories</p>
+          <h1 className="text-4xl font-extrabold text-blue-700 drop-shadow-lg tracking-wide mb-4">Your Journal</h1>
+          <p className="text-lg text-blue-500 italic">Capture reflections and revisit meaningful moments</p>
         </div>
-        {!isSignedIn ? (
+        {!isLoaded ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-blue-700 font-semibold">Loading...</p>
+          </div>
+        ) : !isSignedIn ? (
           <div className="text-center py-12">
             <div className="bg-white/90 rounded-3xl shadow-2xl p-8 max-w-md mx-auto">
-              <h2 className="text-2xl font-extrabold text-blue-700 mb-4">Sign In to Journal</h2>
+              <h2 className="text-2xl font-extrabold text-blue-700 mb-4">Sign In to Write</h2>
               <p className="text-gray-600 mb-6">
-                Sign in to record thoughts and reflect on past memories in your personal journal.
+                Create entries, revisit past reflections, and keep your personal journal in one place.
               </p>
               <button
-                onClick={() => (window.location.href = '/dashboard')}
+                onClick={() => (window.location.href = '/sign-in?redirect_url=/journal')}
                 className="px-6 py-3 bg-gradient-to-r from-blue-500 to-pink-400 text-white rounded-full font-semibold shadow hover:from-blue-600 hover:to-pink-500 transition-transform transform hover:scale-105"
               >
                 Sign In
