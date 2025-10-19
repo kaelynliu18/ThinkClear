@@ -7,6 +7,7 @@ import {
   loadProgressData,
   saveProgressData,
 } from '../../../lib/progressStorage';
+import { loadFaceMetadata } from '../../../lib/faceStorage';
 
 export async function POST(req: Request) {
   const user = await currentUser();
@@ -65,6 +66,19 @@ export async function GET() {
   try {
     const data = await loadProgressData(userId);
     const accuracyMap = computeAccuracyFromEntries(data.entries);
+    const metadata = await loadFaceMetadata(userId);
+
+    Object.keys(metadata).forEach((name) => {
+      const key = name.trim().toLowerCase();
+      if (!accuracyMap[key]) {
+        accuracyMap[key] = {
+          label: name,
+          correct: 0,
+          total: 0,
+        };
+      }
+    });
+
     const accuracyArray = Object.values(accuracyMap).map((stat) => ({
       label: stat.label,
       type: 'face' as const,

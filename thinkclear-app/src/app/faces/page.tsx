@@ -21,29 +21,49 @@ export default function FacesPage() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("Processing your update...");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadFaces = async () => {
+  const fetchFacesData = async (): Promise<FacesData> => {
     try {
       const res = await fetch("/api/faces", { cache: "no-store" });
       const json = await res.json();
 
       if (!res.ok) {
         console.error("Failed to load faces:", json?.error);
-        setFaces({});
-        setInitialLoading(false);
-        return;
+        return {} as FacesData;
       }
 
-      setFaces(json ?? {});
-      setInitialLoading(false);
+      return (json ?? {}) as FacesData;
     } catch (err) {
       console.error("Failed to load faces", err);
-      setFaces({});
-      setInitialLoading(false);
+      return {} as FacesData;
     }
   };
 
+  const loadFaces = async () => {
+    const data = await fetchFacesData();
+    setFaces(data);
+    setInitialLoading(false);
+    return data;
+  };
+
+
+  const pollForFace = async (faceName: string, imageUrl: string) => {
+    const attempts = 12;
+    for (let i = 0; i < attempts; i++) {
+      const data = await fetchFacesData();
+      if (Object.keys(data).length > 0) {
+        setFaces(data);
+      }
+      const entry = data?.[faceName];
+      if (entry && (!imageUrl || entry.images.includes(imageUrl))) {
+        return true;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+    return false;
+  };
   const refreshDependentData = async () => {
     try {
       await Promise.all([
@@ -102,26 +122,52 @@ export default function FacesPage() {
     formData.append("file", file);
 
     try {
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Upload failed");
+
       // success → close modal and reset
       setShowModal(false);
       setName("");
       setRelationship("");
       setFile(null);
       fileInputRef.current!.value = "";
+
+      setSyncMessage("Processing your update...");
       setSyncing(true);
-      await loadFaces();
+
+      let synced = false;
+      const expectedName = (json.face?.name as string | undefined) ?? name;
+      const expectedUrl = (json.face?.imageUrl as string | undefined) ?? "";
+
+      if (json.face) {
+        const uploadedFace = json.face as { name: string; relationship: string; imageUrl: string };
+        setFaces((prev) => ({
+          ...prev,
+          [uploadedFace.name]: {
+            relationship: uploadedFace.relationship,
+            images: [uploadedFace.imageUrl, ...(prev[uploadedFace.name]?.images ?? [])],
+          },
+        }));
+      }
+
+      synced = await pollForFace(expectedName, expectedUrl);
+      setSyncMessage(synced ? "Wrapping up..." : "Still syncing… this may take a moment.");
+
       await refreshDependentData();
+      await loadFaces();
+
+      const delay = synced ? 600 : 1800;
+      setTimeout(() => setSyncing(false), delay);
     } catch (err: any) {
       setError(err.message);
+      setSyncMessage("Something went wrong. Please try refreshing.");
+      setTimeout(() => setSyncing(false), 2000);
     } finally {
       setLoading(false);
-      setSyncing(false);
     }
   };
 
@@ -131,7 +177,7 @@ export default function FacesPage() {
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-white/80 backdrop-blur">
           <div className="bg-white rounded-2xl shadow-2xl px-8 py-6 text-center">
             <div className="animate-spin h-10 w-10 border-4 border-blue-200 border-t-blue-500 rounded-full mx-auto mb-4"></div>
-            <p className="text-blue-600 font-semibold">Processing your update...</p>
+            <p className="text-blue-600 font-semibold">{syncMessage}</p>
             <p className="text-sm text-blue-400">This can take a few seconds.</p>
           </div>
         </div>
