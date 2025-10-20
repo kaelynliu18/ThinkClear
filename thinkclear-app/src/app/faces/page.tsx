@@ -122,46 +122,25 @@ export default function FacesPage() {
   };
 
 
-  const pollForFace = async (faceName: string, imageUrl: string) => {
-    const attempts = 12;
-    for (let i = 0; i < attempts; i++) {
-      const data = await fetchFacesData();
-      if (Object.keys(data).length > 0) {
-        setFaces(data);
-      }
-      const entry = data?.[faceName];
-      if (entry && (!imageUrl || entry.images.includes(imageUrl))) {
-        return true;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-    }
-    return false;
-  };
-
-  const pollForFaceRemoval = async (faceName: string) => {
-    const attempts = 12;
-    for (let i = 0; i < attempts; i++) {
-      const data = await fetchFacesData();
-      if (Object.keys(data).length > 0 || initialLoading) {
-        setFaces(data);
-      }
-      if (!data[faceName]) {
-        return true;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-    }
-    return false;
-  };
-  const pollProgressForFace = async (faceName: string, expectPresent: boolean) => {
+  const waitForFaceStatus = async (faceName: string, imageUrl: string, expectPresent: boolean) => {
     const target = faceName.trim().toLowerCase();
-    const attempts = 10;
+    const attempts = 20;
     for (let i = 0; i < attempts; i++) {
-      const progress = await fetchProgressData();
-      const labels = (progress.accuracy ?? []).map((item) => item.label.trim().toLowerCase());
-      const hasFace = labels.includes(target);
-      if ((expectPresent && hasFace) || (!expectPresent && !hasFace)) {
+      const facesData = await fetchFacesData();
+      if (Object.keys(facesData).length > 0) {
+        setFaces(facesData);
+      }
+      const entry = facesData?.[faceName];
+      const facePresent = !!entry && (!imageUrl || entry.images.includes(imageUrl));
+
+      const progressData = await fetchProgressData();
+      const labels = (progressData.accuracy ?? []).map((item) => item.label.trim().toLowerCase());
+      const progressPresent = labels.includes(target);
+
+      if ((expectPresent && facePresent && progressPresent) || (!expectPresent && !facePresent && !progressPresent)) {
         return true;
       }
+
       await new Promise((resolve) => setTimeout(resolve, 1500));
     }
     return false;
@@ -329,16 +308,17 @@ export default function FacesPage() {
         return next;
       });
 
-      const removed = await pollForFaceRemoval(person);
-      const progressCleared = await pollProgressForFace(person, false);
-      const fullyCleared = removed && progressCleared;
+      const fullyCleared = await waitForFaceStatus(person, "", false);
       setSyncMessage(fullyCleared ? "Cleaning up..." : "Still removing… this may take a moment.");
 
       await refreshDependentData();
       await loadFaces();
 
-      const delay = fullyCleared ? 500 : 1500;
-      setTimeout(() => setSyncing(false), delay);
+      if (fullyCleared) {
+        setTimeout(() => setSyncing(false), 500);
+      } else {
+        setSyncMessage("Still removing… this may take a moment.");
+      }
     } catch (err) {
       console.error("Failed to delete face", err);
       setSyncMessage("Delete failed. Please refresh and try again.");
@@ -390,7 +370,6 @@ export default function FacesPage() {
       setSyncMessage("Processing your update...");
       setSyncing(true);
 
-      let synced = false;
       const expectedName = (json.face?.name as string | undefined) ?? name;
       const expectedUrl = (json.face?.imageUrl as string | undefined) ?? "";
 
@@ -405,16 +384,17 @@ export default function FacesPage() {
         }));
       }
 
-      synced = await pollForFace(expectedName, expectedUrl);
-      const progressSynced = await pollProgressForFace(expectedName, true);
-      const fullySynced = synced && progressSynced;
+      const fullySynced = await waitForFaceStatus(expectedName, expectedUrl, true);
       setSyncMessage(fullySynced ? "Wrapping up..." : "Still syncing… this may take a moment.");
 
       await refreshDependentData();
       await loadFaces();
 
-      const delay = fullySynced ? 600 : 1800;
-      setTimeout(() => setSyncing(false), delay);
+      if (fullySynced) {
+        setTimeout(() => setSyncing(false), 600);
+      } else {
+        setSyncMessage("Still syncing… this may take a moment.");
+      }
     } catch (err: any) {
       setError(err.message);
       setSyncMessage("Something went wrong. Please try refreshing.");
