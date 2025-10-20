@@ -1,8 +1,50 @@
 "use client";
 
-import { useState, useEffect, useRef, FormEvent } from "react";
+import { useState, useEffect, useRef, FormEvent, useCallback } from "react";
 import { Trash2 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
+import Cropper, { Area } from "react-easy-crop";
+
+async function getCroppedBlob(imageSrc: string, pixelCrop: Area, mimeType: string): Promise<Blob> {
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = imageSrc;
+  });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Canvas not supported');
+  }
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  const outputType = mimeType && mimeType.includes('png') ? 'image/png' : 'image/jpeg';
+
+  return await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error('Failed to create cropped image'));
+      }
+    }, outputType, 0.95);
+  });
+}
 
 type Face = {
   relationship: string;
@@ -29,6 +71,13 @@ export default function FacesPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("Processing your update...");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [imageForCropping, setImageForCropping] = useState<string | null>(null);
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
   const fetchFacesData = async (): Promise<FacesData> => {
     try {
@@ -132,6 +181,118 @@ export default function FacesPage() {
     loadFaces();
   }, [showModal]);
 
+  const openCropper = useCallback((fileToCrop: File) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImageForCropping(reader.result as string);
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        setCroppedAreaPixels(null);
+        setCropModalOpen(true);
+      };
+      reader.readAsDataURL(fileToCrop);
+  }, []);
+
+  const handleFileSelection = (fileList: FileList | null) => {
+    setError("");
+    const picked = fileList?.[0];
+    if (!picked) {
+      setFile(null);
+      setOriginalFile(null);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
+      return;
+    }
+
+    setOriginalFile(picked);
+
+    if (/heic|heif/i.test(picked.type) || /\.heic$/i.test(picked.name) || /\.heif$/i.test(picked.name)) {
+      setFile(picked);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
+      setImageForCropping(null);
+      setCropModalOpen(false);
+      setError("Cropping is not available for HEIC images. We'll upload it as-is.");
+      return;
+    }
+
+    setFile(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+
+    openCropper(picked);
+  };
+
+  const handleCropCancel = () => {
+    setCropModalOpen(false);
+    setImageForCropping(null);
+    setCroppedAreaPixels(null);
+    setZoom(1);
+    if (!file) {
+      setOriginalFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRecrop = () => {
+    setError("");
+    if (!originalFile) return;
+    if (/heic|heif/i.test(originalFile.type) || /\.heic$/i.test(originalFile.name) || /\.heif$/i.test(originalFile.name)) {
+      return;
+    }
+    openCropper(originalFile);
+  };
+
+  const onCropComplete = useCallback((_: Area, croppedArea: Area) => {
+    setCroppedAreaPixels(croppedArea);
+  }, []);
+
+  const handleCropConfirm = async () => {
+    if (!imageForCropping || !croppedAreaPixels || !originalFile) {
+      return;
+    }
+
+    try {
+      const blob = await getCroppedBlob(imageForCropping, croppedAreaPixels, originalFile.type);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      const extension = blob.type === 'image/png' ? 'png' : 'jpg';
+      const baseName = originalFile.name.replace(/\.[^/.]+$/, '');
+      const croppedFile = new File([blob], `${baseName}-cropped.${extension}`, {
+        type: blob.type,
+      });
+      setFile(croppedFile);
+      const nextPreview = URL.createObjectURL(blob);
+      setPreviewUrl(nextPreview);
+      setCropModalOpen(false);
+      setImageForCropping(null);
+      setCroppedAreaPixels(null);
+      setZoom(1);
+    } catch (err) {
+      console.error('Failed to crop image', err);
+      setError('Unable to crop image. Please try a different photo.');
+      setCropModalOpen(false);
+      setImageForCropping(null);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
   // Add a function to handle deleting a face
   const handleDelete = async (person: string, image: string) => {
     if (!confirm(`Delete ${person}?`)) return;
@@ -181,8 +342,12 @@ export default function FacesPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!name.trim() || !relationship.trim() || !file) {
+    if (!name.trim() || !relationship.trim()) {
       setError("All fields are required.");
+      return;
+    }
+    if (!file) {
+      setError("Please select and crop a photo.");
       return;
     }
     setLoading(true);
@@ -190,7 +355,7 @@ export default function FacesPage() {
     const formData = new FormData();
     formData.append("name", name);
     formData.append("relationship", relationship);
-    formData.append("file", file);
+    formData.append("file", file, file.name);
 
     try {
       const res = await fetch("/api/upload", {
@@ -205,7 +370,15 @@ export default function FacesPage() {
       setName("");
       setRelationship("");
       setFile(null);
-      fileInputRef.current!.value = "";
+      setOriginalFile(null);
+      setImageForCropping(null);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
 
       setSyncMessage("Processing your update...");
       setSyncing(true);
@@ -246,6 +419,55 @@ export default function FacesPage() {
 
   return (
     <main className="min-h-screen p-6 pb-12 bg-gradient-to-b from-[#e2f0ff] to-[#ffe5f0]">
+      {cropModalOpen && imageForCropping && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg">
+            <h3 className="text-xl font-semibold text-blue-700 mb-4">Adjust Crop</h3>
+            <div className="relative w-full h-72 bg-black rounded-xl overflow-hidden">
+              <Cropper
+                image={imageForCropping}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                cropShape="round"
+                showGrid={false}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+              />
+            </div>
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-blue-600 mb-2">Zoom</label>
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.1}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="w-full accent-blue-500"
+              />
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleCropCancel}
+                className="px-4 py-2 border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCropConfirm}
+                disabled={!croppedAreaPixels}
+                className="px-5 py-2 bg-gradient-to-r from-blue-500 to-pink-400 text-white rounded-full font-semibold shadow disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Use Photo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {syncing && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-white/80 backdrop-blur">
           <div className="bg-white rounded-2xl shadow-2xl px-8 py-6 text-center">
@@ -351,12 +573,32 @@ export default function FacesPage() {
                   ref={fileInputRef}
                   type="file"
                   accept="image/*,.heic,.heif"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  onChange={(e) => handleFileSelection(e.target.files)}
                   className="w-full border border-blue-200 rounded px-3 py-2"
                 />
                 <small className="text-xs text-gray-500">
                   HEIC, JPEG, PNG—anything will be converted to JPEG.
                 </small>
+                {previewUrl && (
+                  <div className="mt-4">
+                    <img
+                      src={previewUrl}
+                      alt="Cropped preview"
+                      className="w-32 h-32 object-cover rounded-full border-2 border-blue-200 shadow"
+                    />
+                  </div>
+                )}
+                {file &&
+                  originalFile &&
+                  !(/heic|heif/i.test(originalFile.type) || /\.heic$/i.test(originalFile.name) || /\.heif$/i.test(originalFile.name)) && (
+                  <button
+                    type="button"
+                    onClick={handleRecrop}
+                    className="mt-3 px-4 py-2 border border-blue-300 rounded-full text-blue-600 hover:bg-blue-50 transition"
+                  >
+                    Adjust Crop
+                  </button>
+                )}
               </div>
 
               {error && <p className="text-red-600 text-center">{error}</p>}
