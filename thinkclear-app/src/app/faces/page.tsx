@@ -261,21 +261,14 @@ export default function FacesPage() {
       const res = await fetch("/api/delete", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: person, file: image }),
+        credentials: 'include',
+        body: JSON.stringify({ name: person }),
       });
       if (!res.ok) throw new Error("Failed to delete");
 
       setFaces((prev) => {
         const next = { ...prev };
-        const entry = next[person];
-        if (!entry) return next;
-
-        const remaining = entry.images.filter((url) => url !== image);
-        if (remaining.length === 0) {
-          delete next[person];
-        } else {
-          next[person] = { ...entry, images: remaining };
-        }
+        delete next[person];
         return next;
       });
 
@@ -318,6 +311,7 @@ export default function FacesPage() {
     try {
       const res = await fetch("/api/upload", {
         method: "POST",
+        credentials: 'include',
         body: formData,
       });
       const json = await res.json();

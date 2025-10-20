@@ -12,16 +12,16 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { name?: string; file?: string };
+  let body: { name?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { name, file } = body;
-  if (!name || !file) {
-    return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+  const { name } = body;
+  if (!name) {
+    return NextResponse.json({ error: 'Missing face name' }, { status: 400 });
   }
 
   try {
@@ -31,21 +31,19 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Face not found' }, { status: 404 });
     }
 
-    entry.images = entry.images.filter((url) => url !== file);
-    const faceRemoved = entry.images.length === 0;
-    if (faceRemoved) {
-      delete metadata[name];
-    }
+    const imagesToRemove = [...entry.images];
+    delete metadata[name];
 
-    await del(file, { token: process.env.BLOB_READ_WRITE_TOKEN }).catch((error) => {
-      console.warn('Failed to delete blob', error);
-    });
+    await Promise.all(
+      imagesToRemove.map((url) =>
+        del(url, { token: process.env.BLOB_READ_WRITE_TOKEN }).catch((error) => {
+          console.warn('Failed to delete blob', error);
+        })
+      )
+    );
 
     await saveFaceMetadata(userId, metadata);
-
-    if (faceRemoved) {
-      await removeProgressForFace(userId, name);
-    }
+    await removeProgressForFace(userId, name);
 
     return NextResponse.json({ message: 'Delete successful' });
   } catch (error) {
