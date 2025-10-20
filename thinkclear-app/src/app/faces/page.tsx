@@ -124,8 +124,8 @@ export default function FacesPage() {
 
   const waitForFaceStatus = async (faceName: string, imageUrl: string, expectPresent: boolean) => {
     const target = faceName.trim().toLowerCase();
-    const attempts = 20;
-    for (let i = 0; i < attempts; i++) {
+    const maxAttempts = expectPresent ? 10 : 8;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const facesData = await fetchFacesData();
       if (Object.keys(facesData).length > 0) {
         setFaces(facesData);
@@ -141,7 +141,7 @@ export default function FacesPage() {
         return true;
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
     return false;
   };
@@ -309,16 +309,16 @@ export default function FacesPage() {
       });
 
       const fullyCleared = await waitForFaceStatus(person, "", false);
-      setSyncMessage(fullyCleared ? "Cleaning up..." : "Still removing… this may take a moment.");
+      if (fullyCleared) {
+        setSyncMessage("Cleaning up...");
+      } else {
+        setSyncMessage("Still removing… this may take a moment.");
+      }
 
       await refreshDependentData();
       await loadFaces();
 
-      if (fullyCleared) {
-        setTimeout(() => setSyncing(false), 500);
-      } else {
-        setSyncMessage("Still removing… this may take a moment.");
-      }
+      setTimeout(() => setSyncing(false), fullyCleared ? 500 : 1500);
     } catch (err) {
       console.error("Failed to delete face", err);
       setSyncMessage("Delete failed. Please refresh and try again.");
@@ -385,16 +385,16 @@ export default function FacesPage() {
       }
 
       const fullySynced = await waitForFaceStatus(expectedName, expectedUrl, true);
-      setSyncMessage(fullySynced ? "Wrapping up..." : "Still syncing… this may take a moment.");
+      if (fullySynced) {
+        setSyncMessage("Wrapping up...");
+      } else {
+        setSyncMessage("Still syncing… this may take a moment.");
+      }
 
       await refreshDependentData();
       await loadFaces();
 
-      if (fullySynced) {
-        setTimeout(() => setSyncing(false), 600);
-      } else {
-        setSyncMessage("Still syncing… this may take a moment.");
-      }
+      setTimeout(() => setSyncing(false), fullySynced ? 600 : 1500);
     } catch (err: any) {
       setError(err.message);
       setSyncMessage("Something went wrong. Please try refreshing.");
