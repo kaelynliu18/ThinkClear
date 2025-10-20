@@ -64,6 +64,21 @@ export default function FacesPage() {
     }
     return false;
   };
+
+  const pollForFaceRemoval = async (faceName: string) => {
+    const attempts = 12;
+    for (let i = 0; i < attempts; i++) {
+      const data = await fetchFacesData();
+      if (Object.keys(data).length > 0 || initialLoading) {
+        setFaces(data);
+      }
+      if (!data[faceName]) {
+        return true;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+    return false;
+  };
   const refreshDependentData = async () => {
     try {
       await Promise.all([
@@ -82,6 +97,10 @@ export default function FacesPage() {
   // Add a function to handle deleting a face
   const handleDelete = async (person: string, image: string) => {
     if (!confirm(`Delete ${person}?`)) return;
+
+    setSyncMessage("Deleting face...");
+    setSyncing(true);
+
     try {
       const res = await fetch("/api/delete", {
         method: "DELETE",
@@ -89,6 +108,7 @@ export default function FacesPage() {
         body: JSON.stringify({ name: person, file: image }),
       });
       if (!res.ok) throw new Error("Failed to delete");
+
       setFaces((prev) => {
         const next = { ...prev };
         const entry = next[person];
@@ -102,8 +122,19 @@ export default function FacesPage() {
         }
         return next;
       });
+
+      const removed = await pollForFaceRemoval(person);
+      setSyncMessage(removed ? "Cleaning up..." : "Still removing… this may take a moment.");
+
+      await refreshDependentData();
+      await loadFaces();
+
+      const delay = removed ? 500 : 1500;
+      setTimeout(() => setSyncing(false), delay);
     } catch (err) {
-      alert("Could not delete face.");
+      console.error("Failed to delete face", err);
+      setSyncMessage("Delete failed. Please refresh and try again.");
+      setTimeout(() => setSyncing(false), 2000);
     }
   };
 
