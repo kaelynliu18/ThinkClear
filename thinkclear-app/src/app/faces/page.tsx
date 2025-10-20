@@ -52,12 +52,6 @@ type Face = {
 };
 type FacesData = Record<string, Face>;
 
-interface ProgressResponse {
-  entries?: Array<unknown>;
-  accuracy?: Array<{ label: string }>;
-  error?: string;
-}
-
 export default function FacesPage() {
   const { isSignedIn } = useAuth();
   const [faces, setFaces] = useState<FacesData>({});
@@ -96,24 +90,6 @@ export default function FacesPage() {
     }
   };
 
-  const fetchProgressData = async (): Promise<ProgressResponse> => {
-    try {
-      const res = await fetch("/api/progress", {
-        cache: "no-store",
-        credentials: "include",
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        console.warn("Failed to load progress during sync", json?.error);
-        return { accuracy: [] };
-      }
-      return json as ProgressResponse;
-    } catch (err) {
-      console.warn("Progress sync fetch failed", err);
-      return { accuracy: [] };
-    }
-  };
-
   const loadFaces = async () => {
     const data = await fetchFacesData();
     setFaces(data);
@@ -123,8 +99,7 @@ export default function FacesPage() {
 
 
   const waitForFaceStatus = async (faceName: string, imageUrl: string, expectPresent: boolean) => {
-    const target = faceName.trim().toLowerCase();
-    const maxAttempts = expectPresent ? 10 : 8;
+    const maxAttempts = expectPresent ? 8 : 6;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const facesData = await fetchFacesData();
       if (Object.keys(facesData).length > 0) {
@@ -133,15 +108,11 @@ export default function FacesPage() {
       const entry = facesData?.[faceName];
       const facePresent = !!entry && (!imageUrl || entry.images.includes(imageUrl));
 
-      const progressData = await fetchProgressData();
-      const labels = (progressData.accuracy ?? []).map((item) => item.label.trim().toLowerCase());
-      const progressPresent = labels.includes(target);
-
-      if ((expectPresent && facePresent && progressPresent) || (!expectPresent && !facePresent && !progressPresent)) {
+      if ((expectPresent && facePresent) || (!expectPresent && !facePresent)) {
         return true;
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 800));
     }
     return false;
   };
