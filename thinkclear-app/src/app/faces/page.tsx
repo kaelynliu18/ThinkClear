@@ -10,6 +10,12 @@ type Face = {
 };
 type FacesData = Record<string, Face>;
 
+interface ProgressResponse {
+  entries?: Array<unknown>;
+  accuracy?: Array<{ label: string }>;
+  error?: string;
+}
+
 export default function FacesPage() {
   const { isSignedIn } = useAuth();
   const [faces, setFaces] = useState<FacesData>({});
@@ -38,6 +44,24 @@ export default function FacesPage() {
     } catch (err) {
       console.error("Failed to load faces", err);
       return {} as FacesData;
+    }
+  };
+
+  const fetchProgressData = async (): Promise<ProgressResponse> => {
+    try {
+      const res = await fetch("/api/progress", {
+        cache: "no-store",
+        credentials: "include",
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        console.warn("Failed to load progress during sync", json?.error);
+        return { accuracy: [] };
+      }
+      return json as ProgressResponse;
+    } catch (err) {
+      console.warn("Progress sync fetch failed", err);
+      return { accuracy: [] };
     }
   };
 
@@ -73,6 +97,20 @@ export default function FacesPage() {
         setFaces(data);
       }
       if (!data[faceName]) {
+        return true;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+    return false;
+  };
+  const pollProgressForFace = async (faceName: string, expectPresent: boolean) => {
+    const target = faceName.trim().toLowerCase();
+    const attempts = 10;
+    for (let i = 0; i < attempts; i++) {
+      const progress = await fetchProgressData();
+      const labels = (progress.accuracy ?? []).map((item) => item.label.trim().toLowerCase());
+      const hasFace = labels.includes(target);
+      if ((expectPresent && hasFace) || (!expectPresent && !hasFace)) {
         return true;
       }
       await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -124,12 +162,14 @@ export default function FacesPage() {
       });
 
       const removed = await pollForFaceRemoval(person);
-      setSyncMessage(removed ? "Cleaning up..." : "Still removing… this may take a moment.");
+      const progressCleared = await pollProgressForFace(person, false);
+      const fullyCleared = removed && progressCleared;
+      setSyncMessage(fullyCleared ? "Cleaning up..." : "Still removing… this may take a moment.");
 
       await refreshDependentData();
       await loadFaces();
 
-      const delay = removed ? 500 : 1500;
+      const delay = fullyCleared ? 500 : 1500;
       setTimeout(() => setSyncing(false), delay);
     } catch (err) {
       console.error("Failed to delete face", err);
@@ -186,12 +226,14 @@ export default function FacesPage() {
       }
 
       synced = await pollForFace(expectedName, expectedUrl);
-      setSyncMessage(synced ? "Wrapping up..." : "Still syncing… this may take a moment.");
+      const progressSynced = await pollProgressForFace(expectedName, true);
+      const fullySynced = synced && progressSynced;
+      setSyncMessage(fullySynced ? "Wrapping up..." : "Still syncing… this may take a moment.");
 
       await refreshDependentData();
       await loadFaces();
 
-      const delay = synced ? 600 : 1800;
+      const delay = fullySynced ? 600 : 1800;
       setTimeout(() => setSyncing(false), delay);
     } catch (err: any) {
       setError(err.message);
