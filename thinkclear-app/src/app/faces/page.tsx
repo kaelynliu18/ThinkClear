@@ -216,6 +216,8 @@ export default function FacesPage() {
       }
       setImageForCropping(null);
       setCropModalOpen(false);
+      const heicPreview = URL.createObjectURL(picked);
+      setPreviewUrl(heicPreview);
       setError("Cropping is not available for HEIC images. We'll upload it as-is.");
       return;
     }
@@ -248,6 +250,10 @@ export default function FacesPage() {
     if (/heic|heif/i.test(originalFile.type) || /\.heic$/i.test(originalFile.name) || /\.heif$/i.test(originalFile.name)) {
       return;
     }
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
     openCropper(originalFile);
   };
 
@@ -261,6 +267,7 @@ export default function FacesPage() {
     }
 
     try {
+      setError("");
       const blob = await getCroppedBlob(imageForCropping, croppedAreaPixels, originalFile.type);
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
@@ -420,7 +427,7 @@ export default function FacesPage() {
   return (
     <main className="min-h-screen p-6 pb-12 bg-gradient-to-b from-[#e2f0ff] to-[#ffe5f0]">
       {cropModalOpen && imageForCropping && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg">
             <h3 className="text-xl font-semibold text-blue-700 mb-4">Adjust Crop</h3>
             <div className="relative w-full h-72 bg-black rounded-xl overflow-hidden">
@@ -613,8 +620,8 @@ export default function FacesPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700 transition"
+                  disabled={loading || cropModalOpen || !file}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {loading ? "Uploading…" : "Upload"}
                 </button>
