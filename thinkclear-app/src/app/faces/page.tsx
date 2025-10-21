@@ -123,7 +123,7 @@ export default function FacesPage() {
 
   const waitForFaceStatus = async (faceName: string, imageUrl: string, expectPresent: boolean) => {
     const target = faceName.trim().toLowerCase();
-    const maxAttempts = expectPresent ? 12 : 10;
+    const maxAttempts = expectPresent ? 8 : 5;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const [facesData, progressData] = await Promise.all([fetchFacesData(), fetchProgressData()]);
 
@@ -141,7 +141,7 @@ export default function FacesPage() {
         return true;
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 900));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
     return false;
   };
@@ -306,23 +306,19 @@ export default function FacesPage() {
       });
       if (!res.ok) throw new Error("Failed to delete");
 
-      const fullyCleared = await ensureFaceStatus(person, "", false);
-      if (!fullyCleared) {
-        setSyncMessage("Still removing… this may take a moment. Keeping this window open helps us finish the sync.");
-        return;
-      }
-
       setFaces((prev) => {
         const next = { ...prev };
         delete next[person];
         return next;
       });
 
-      setSyncMessage("Cleaning up...");
+      const fullyCleared = await ensureFaceStatus(person, "", false);
+      setSyncMessage(fullyCleared ? "Cleaning up..." : "Finishing up cleanup…");
+
       await refreshDependentData();
       await loadFaces();
 
-      setTimeout(() => setSyncing(false), 600);
+      setTimeout(() => setSyncing(false), fullyCleared ? 500 : 1100);
     } catch (err) {
       console.error("Failed to delete face", err);
       setSyncMessage("Delete failed. Please refresh and try again.");
@@ -381,10 +377,6 @@ export default function FacesPage() {
       await refreshDependentData();
 
       const fullySynced = await ensureFaceStatus(expectedName, expectedUrl, true);
-      if (!fullySynced) {
-        setSyncMessage('Still syncing… this may take a moment. Keeping this window open helps us finish the sync.');
-        return;
-      }
 
       if (json.face) {
         const uploadedFace = json.face as { name: string; relationship: string; imageUrl: string };
@@ -397,9 +389,9 @@ export default function FacesPage() {
         }));
       }
 
-      setSyncMessage('Wrapping up...');
+      setSyncMessage(fullySynced ? 'Wrapping up...' : 'Almost there…');
       await loadFaces();
-      setTimeout(() => setSyncing(false), 600);
+      setTimeout(() => setSyncing(false), fullySynced ? 600 : 1000);
     } catch (err: any) {
       setError(err.message);
       setSyncMessage("Something went wrong. Please try refreshing.");
