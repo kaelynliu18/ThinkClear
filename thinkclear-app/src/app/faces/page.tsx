@@ -295,19 +295,17 @@ export default function FacesPage() {
       });
       if (!res.ok) throw new Error("Failed to delete");
 
-      setFaces((prev) => {
-        const next = { ...prev };
-        delete next[person];
-        return next;
-      });
-
       const fullyCleared = await waitForFaceStatus(person, "", false);
       setSyncMessage(fullyCleared ? "Cleaning up..." : "Finishing up cleanup…");
 
       await refreshDependentData();
-      await loadFaces();
+      const data = await loadFaces();
 
-      setTimeout(() => setSyncing(false), fullyCleared ? 500 : 1100);
+      if (!data[person]) {
+        setFaces(data);
+      }
+
+      setTimeout(() => setSyncing(false), fullyCleared ? 800 : 1400);
     } catch (err) {
       console.error("Failed to delete face", err);
       setSyncMessage("Delete failed. Please refresh and try again.");
