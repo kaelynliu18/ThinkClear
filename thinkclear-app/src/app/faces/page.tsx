@@ -123,7 +123,7 @@ export default function FacesPage() {
 
   const waitForFaceStatus = async (faceName: string, imageUrl: string, expectPresent: boolean) => {
     const target = faceName.trim().toLowerCase();
-    const maxAttempts = expectPresent ? 10 : 8;
+    const maxAttempts = expectPresent ? 12 : 10;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const [facesData, progressData] = await Promise.all([fetchFacesData(), fetchProgressData()]);
 
@@ -141,7 +141,18 @@ export default function FacesPage() {
         return true;
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 700));
+      await new Promise((resolve) => setTimeout(resolve, 900));
+    }
+    return false;
+  };
+
+  const ensureFaceStatus = async (faceName: string, imageUrl: string, expectPresent: boolean) => {
+    const maxRounds = 4;
+    for (let round = 0; round < maxRounds; round++) {
+      const success = await waitForFaceStatus(faceName, imageUrl, expectPresent);
+      if (success) {
+        return true;
+      }
     }
     return false;
   };
@@ -295,23 +306,23 @@ export default function FacesPage() {
       });
       if (!res.ok) throw new Error("Failed to delete");
 
+      const fullyCleared = await ensureFaceStatus(person, "", false);
+      if (!fullyCleared) {
+        setSyncMessage("Still removing… this may take a moment. Keeping this window open helps us finish the sync.");
+        return;
+      }
+
       setFaces((prev) => {
         const next = { ...prev };
         delete next[person];
         return next;
       });
 
-      const fullyCleared = await waitForFaceStatus(person, "", false);
-      if (fullyCleared) {
-        setSyncMessage("Cleaning up...");
-      } else {
-        setSyncMessage("Still removing… this may take a moment.");
-      }
-
+      setSyncMessage("Cleaning up...");
       await refreshDependentData();
       await loadFaces();
 
-      setTimeout(() => setSyncing(false), fullyCleared ? 500 : 1500);
+      setTimeout(() => setSyncing(false), 600);
     } catch (err) {
       console.error("Failed to delete face", err);
       setSyncMessage("Delete failed. Please refresh and try again.");
@@ -367,6 +378,14 @@ export default function FacesPage() {
       const expectedName = (json.face?.name as string | undefined) ?? name;
       const expectedUrl = (json.face?.imageUrl as string | undefined) ?? "";
 
+      await refreshDependentData();
+
+      const fullySynced = await ensureFaceStatus(expectedName, expectedUrl, true);
+      if (!fullySynced) {
+        setSyncMessage('Still syncing… this may take a moment. Keeping this window open helps us finish the sync.');
+        return;
+      }
+
       if (json.face) {
         const uploadedFace = json.face as { name: string; relationship: string; imageUrl: string };
         setFaces((prev) => ({
@@ -378,17 +397,9 @@ export default function FacesPage() {
         }));
       }
 
-      const fullySynced = await waitForFaceStatus(expectedName, expectedUrl, true);
-      if (fullySynced) {
-        setSyncMessage("Wrapping up...");
-      } else {
-        setSyncMessage("Still syncing… this may take a moment.");
-      }
-
-      await refreshDependentData();
+      setSyncMessage('Wrapping up...');
       await loadFaces();
-
-      setTimeout(() => setSyncing(false), fullySynced ? 600 : 1500);
+      setTimeout(() => setSyncing(false), 600);
     } catch (err: any) {
       setError(err.message);
       setSyncMessage("Something went wrong. Please try refreshing.");
