@@ -52,6 +52,11 @@ type Face = {
 };
 type FacesData = Record<string, Face>;
 
+interface ProgressResponse {
+  accuracy?: Array<{ label: string }>;
+  error?: string;
+}
+
 export default function FacesPage() {
   const { isSignedIn } = useAuth();
   const [faces, setFaces] = useState<FacesData>({});
@@ -98,10 +103,29 @@ export default function FacesPage() {
   };
 
 
+  const fetchProgressData = async (): Promise<ProgressResponse> => {
+    try {
+      const res = await fetch("/api/progress", {
+        cache: "no-store",
+        credentials: 'include',
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        console.warn('Failed to load progress during sync', json?.error);
+        return { accuracy: [] };
+      }
+      return json as ProgressResponse;
+    } catch (err) {
+      console.warn('Progress sync fetch failed', err);
+      return { accuracy: [] };
+    }
+  };
+
   const waitForFaceStatus = async (faceName: string, imageUrl: string, expectPresent: boolean) => {
-    const maxAttempts = expectPresent ? 8 : 5;
+    const target = faceName.trim().toLowerCase();
+    const maxAttempts = expectPresent ? 12 : 8;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const facesData = await fetchFacesData();
+      const [facesData, progressData] = await Promise.all([fetchFacesData(), fetchProgressData()]);
 
       if (Object.keys(facesData).length > 0) {
         setFaces(facesData);
@@ -110,11 +134,14 @@ export default function FacesPage() {
       const entry = facesData?.[faceName];
       const facePresent = !!entry && (!imageUrl || entry.images.includes(imageUrl));
 
-      if ((expectPresent && facePresent) || (!expectPresent && !facePresent)) {
+      const labels = (progressData.accuracy ?? []).map((item) => item.label.trim().toLowerCase());
+      const progressPresent = labels.includes(target);
+
+      if ((expectPresent && facePresent && progressPresent) || (!expectPresent && !facePresent && !progressPresent)) {
         return true;
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 800));
     }
     return false;
   };
