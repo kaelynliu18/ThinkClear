@@ -52,11 +52,6 @@ type Face = {
 };
 type FacesData = Record<string, Face>;
 
-interface ProgressResponse {
-  accuracy?: Array<{ label: string }>;
-  error?: string;
-}
-
 export default function FacesPage() {
   const { isSignedIn } = useAuth();
   const [faces, setFaces] = useState<FacesData>({});
@@ -103,56 +98,23 @@ export default function FacesPage() {
   };
 
 
-  const fetchProgressData = async (): Promise<ProgressResponse> => {
-    try {
-      const res = await fetch("/api/progress", {
-        cache: "no-store",
-        credentials: 'include',
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        console.warn('Failed to load progress during sync', json?.error);
-        return { accuracy: [] };
-      }
-      return json as ProgressResponse;
-    } catch (err) {
-      console.warn('Progress sync fetch failed', err);
-      return { accuracy: [] };
-    }
-  };
-
   const waitForFaceStatus = async (faceName: string, imageUrl: string, expectPresent: boolean) => {
-    const target = faceName.trim().toLowerCase();
     const maxAttempts = expectPresent ? 8 : 5;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const [facesData, progressData] = await Promise.all([fetchFacesData(), fetchProgressData()]);
+      const facesData = await fetchFacesData();
 
-      if (expectPresent && Object.keys(facesData).length > 0) {
+      if (Object.keys(facesData).length > 0) {
         setFaces(facesData);
       }
 
       const entry = facesData?.[faceName];
       const facePresent = !!entry && (!imageUrl || entry.images.includes(imageUrl));
 
-      const labels = (progressData.accuracy ?? []).map((item) => item.label.trim().toLowerCase());
-      const progressPresent = labels.includes(target);
-
-      if ((expectPresent && facePresent && progressPresent) || (!expectPresent && !facePresent && !progressPresent)) {
+      if ((expectPresent && facePresent) || (!expectPresent && !facePresent)) {
         return true;
       }
 
       await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-    return false;
-  };
-
-  const ensureFaceStatus = async (faceName: string, imageUrl: string, expectPresent: boolean) => {
-    const maxRounds = 4;
-    for (let round = 0; round < maxRounds; round++) {
-      const success = await waitForFaceStatus(faceName, imageUrl, expectPresent);
-      if (success) {
-        return true;
-      }
     }
     return false;
   };
@@ -312,7 +274,7 @@ export default function FacesPage() {
         return next;
       });
 
-      const fullyCleared = await ensureFaceStatus(person, "", false);
+      const fullyCleared = await waitForFaceStatus(person, "", false);
       setSyncMessage(fullyCleared ? "Cleaning up..." : "Finishing up cleanup…");
 
       await refreshDependentData();
@@ -376,7 +338,7 @@ export default function FacesPage() {
 
       await refreshDependentData();
 
-      const fullySynced = await ensureFaceStatus(expectedName, expectedUrl, true);
+      const fullySynced = await waitForFaceStatus(expectedName, expectedUrl, true);
 
       if (json.face) {
         const uploadedFace = json.face as { name: string; relationship: string; imageUrl: string };
