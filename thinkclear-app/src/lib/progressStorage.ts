@@ -18,16 +18,10 @@ export interface StoredAccuracyStat {
 export interface StoredProgressData {
   entries: StoredProgressEntry[];
   accuracy: Record<string, StoredAccuracyStat>;
-  version: number;
-  lastUpdated: string;
 }
 
 const PROGRESS_PATH = (userId: string) => `progress/${userId}/progress.json`;
 const PROGRESS_LIMIT = 500;
-
-// In-memory cache for ultra-fast access
-const progressCache = new Map<string, { data: StoredProgressData; timestamp: number }>();
-const CACHE_TTL = 15000; // 15 seconds for progress data
 
 const tokenedHeaders = () =>
   process.env.BLOB_READ_WRITE_TOKEN
@@ -58,16 +52,9 @@ async function ensureProgressBlob(userId: string): Promise<void> {
   });
 
   if (existing.blobs.length === 0) {
-    const initialData: StoredProgressData = {
-      entries: [],
-      accuracy: {},
-      version: 1,
-      lastUpdated: new Date().toISOString()
-    };
-    
     await put(
       PROGRESS_PATH(userId),
-      JSON.stringify(initialData),
+      JSON.stringify({ entries: [], accuracy: {} }),
       {
         access: 'public',
         contentType: 'application/json',
@@ -125,18 +112,10 @@ const normalizeData = (data: StoredProgressData): StoredProgressData => {
   return {
     entries: limitedEntries,
     accuracy,
-    version: data.version || 1,
-    lastUpdated: new Date().toISOString()
   };
 };
 
 export async function loadProgressData(userId: string): Promise<StoredProgressData> {
-  // Check cache first for ultra-fast access
-  const cached = progressCache.get(userId);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data;
-  }
-
   await ensureProgressBlob(userId);
 
   const { blobs } = await list({
@@ -145,31 +124,22 @@ export async function loadProgressData(userId: string): Promise<StoredProgressDa
     token: process.env.BLOB_READ_WRITE_TOKEN,
   });
 
-  let data: StoredProgressData;
   if (blobs.length === 0) {
-    data = { entries: [], accuracy: {}, version: 1, lastUpdated: new Date().toISOString() };
-  } else {
-    try {
-      const jsonString = await fetchBlobContent(blobs[0].downloadUrl ?? blobs[0].url);
-      const parsed = JSON.parse(jsonString) as StoredProgressData;
-      data = normalizeData(parsed);
-    } catch (error) {
-      console.warn('Failed to parse progress data blob', error);
-      data = { entries: [], accuracy: {}, version: 1, lastUpdated: new Date().toISOString() };
-    }
+    return { entries: [], accuracy: {} };
   }
 
-  // Update cache
-  progressCache.set(userId, { data, timestamp: Date.now() });
-  
-  return data;
+  try {
+    const jsonString = await fetchBlobContent(blobs[0].downloadUrl ?? blobs[0].url);
+    const parsed = JSON.parse(jsonString) as StoredProgressData;
+    return normalizeData(parsed);
+  } catch (error) {
+    console.warn('Failed to parse progress data blob', error);
+    return { entries: [], accuracy: {} };
+  }
 }
 
-export async function saveProgressData(userId: string, data: StoredProgressData): Promise<StoredProgressData> {
+export async function saveProgressData(userId: string, data: StoredProgressData) {
   const normalized = normalizeData(data);
-  normalized.version = (normalized.version || 1) + 1;
-  normalized.lastUpdated = new Date().toISOString();
-  
   await put(PROGRESS_PATH(userId), JSON.stringify(normalized), {
     access: 'public',
     contentType: 'application/json',
@@ -177,11 +147,6 @@ export async function saveProgressData(userId: string, data: StoredProgressData)
     allowOverwrite: true,
     token: process.env.BLOB_READ_WRITE_TOKEN,
   });
-
-  // Update cache
-  progressCache.set(userId, { data: normalized, timestamp: Date.now() });
-  
-  return normalized;
 }
 
 export function appendProgressEntry(
@@ -194,12 +159,7 @@ export function appendProgressEntry(
   }
 
   const entries = [...(data.entries ?? []), normalizedEntry];
-  const normalized = normalizeData({ 
-    entries, 
-    accuracy: data.accuracy ?? {},
-    version: data.version || 1,
-    lastUpdated: data.lastUpdated || new Date().toISOString()
-  });
+  const normalized = normalizeData({ entries, accuracy: data.accuracy ?? {} });
   return normalized;
 }
 
@@ -210,7 +170,7 @@ export function getAccuracyStat(data: StoredProgressData, label: string): Stored
   return stat ?? { label: trimmed, correct: 0, total: 0 };
 }
 
-export async function removeProgressForFace(userId: string, faceLabel: string): Promise<void> {
+export async function removeProgressForFace(userId: string, faceLabel: string) {
   const data = await loadProgressData(userId);
   const filtered = data.entries.filter((entry) => entry.face !== faceLabel);
 
@@ -218,44 +178,6 @@ export async function removeProgressForFace(userId: string, faceLabel: string): 
     return;
   }
 
-  const normalized = normalizeData({ 
-    entries: filtered, 
-    accuracy: {},
-    version: data.version || 1,
-    lastUpdated: data.lastUpdated || new Date().toISOString()
-  });
+  const normalized = normalizeData({ entries: filtered, accuracy: {} });
   await saveProgressData(userId, normalized);
-}
-
-export function invalidateProgressCache(userId: string) {
-  progressCache.delete(userId);
-}
-
-export function getProgressCacheStats() {
-  return {
-    size: progressCache.size,
-    entries: Array.from(progressCache.keys())
-  };
-}
-
-// Fast batch operations for game sessions
-export async function appendMultipleProgressEntries(
-  userId: string,
-  entries: StoredProgressEntry[]
-): Promise<StoredProgressData> {
-  const data = await loadProgressData(userId);
-  
-  const normalizedEntries = entries
-    .map(entry => normalizeEntry(entry, entry.id ?? randomUUID()))
-    .filter((entry): entry is StoredProgressEntry => entry !== null);
-  
-  const newEntries = [...(data.entries ?? []), ...normalizedEntries];
-  const normalized = normalizeData({ 
-    entries: newEntries, 
-    accuracy: data.accuracy ?? {},
-    version: data.version || 1,
-    lastUpdated: data.lastUpdated || new Date().toISOString()
-  });
-  
-  return await saveProgressData(userId, normalized);
 }

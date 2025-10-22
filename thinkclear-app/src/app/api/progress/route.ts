@@ -3,7 +3,6 @@ import { currentUser } from '@clerk/nextjs/server';
 import { randomUUID } from 'crypto';
 import {
   appendProgressEntry,
-  appendMultipleProgressEntries,
   computeAccuracyFromEntries,
   loadProgressData,
   saveProgressData,
@@ -18,65 +17,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { 
-    face?: string; 
-    correct?: number; 
-    total?: number; 
-    playedAt?: string;
-    entries?: Array<{ face: string; correct: number; total: number; playedAt?: string }>;
-  };
-  
+  let body: { face?: string; correct?: number; total?: number; playedAt?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { face, correct, total, playedAt, entries } = body;
+  const { face, correct, total, playedAt } = body;
+  if (!face || typeof correct !== 'number' || typeof total !== 'number') {
+    return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+  }
+
+  const played = playedAt ? new Date(playedAt) : new Date();
+  if (Number.isNaN(played.getTime())) {
+    return NextResponse.json({ error: 'Invalid playedAt value' }, { status: 400 });
+  }
 
   try {
-    // Handle batch entries for game sessions
-    if (entries && Array.isArray(entries)) {
-      if (entries.length === 0) {
-        return NextResponse.json({ error: 'Empty entries array' }, { status: 400 });
-      }
-
-      // Validate all entries
-      for (const entry of entries) {
-        if (!entry.face || typeof entry.correct !== 'number' || typeof entry.total !== 'number') {
-          return NextResponse.json({ error: 'Invalid entry format' }, { status: 400 });
-        }
-      }
-
-      const normalizedEntries = entries.map(entry => ({
-        id: randomUUID(),
-        face: entry.face,
-        correct: entry.correct,
-        total: entry.total,
-        playedAt: entry.playedAt ? new Date(entry.playedAt).toISOString() : new Date().toISOString(),
-      }));
-
-      const updated = await appendMultipleProgressEntries(userId, normalizedEntries);
-
-      const res = NextResponse.json({ 
-        message: 'Batch logged', 
-        count: entries.length,
-        version: updated.version 
-      });
-      res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-      return res;
-    }
-
-    // Handle single entry
-    if (!face || typeof correct !== 'number' || typeof total !== 'number') {
-      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
-    }
-
-    const played = playedAt ? new Date(playedAt) : new Date();
-    if (Number.isNaN(played.getTime())) {
-      return NextResponse.json({ error: 'Invalid playedAt value' }, { status: 400 });
-    }
-
     const data = await loadProgressData(userId);
     const updated = appendProgressEntry(data, {
       id: randomUUID(),
@@ -86,12 +44,9 @@ export async function POST(req: Request) {
       playedAt: played.toISOString(),
     });
 
-    const saved = await saveProgressData(userId, updated);
+    await saveProgressData(userId, updated);
 
-    const res = NextResponse.json({ 
-      message: 'Logged',
-      version: saved.version 
-    });
+    const res = NextResponse.json({ message: 'Logged' });
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return res;
   } catch (error) {
@@ -100,7 +55,7 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET(req: Request) {
+export async function GET() {
   const user = await currentUser();
   const userId = user?.id;
 
@@ -108,15 +63,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const url = new URL(req.url);
-  const includeVersion = url.searchParams.get('includeVersion') === 'true';
-
   try {
     const data = await loadProgressData(userId);
     const accuracyMap = computeAccuracyFromEntries(data.entries);
     const metadata = await loadFaceMetadata(userId);
 
-    // Ensure all faces in metadata have accuracy stats
     Object.keys(metadata).forEach((name) => {
       const key = name.trim().toLowerCase();
       if (!accuracyMap[key]) {
@@ -135,19 +86,7 @@ export async function GET(req: Request) {
       total: stat.total,
     }));
 
-    const response = includeVersion 
-      ? { 
-          entries: data.entries, 
-          accuracy: accuracyArray,
-          version: data.version,
-          lastUpdated: data.lastUpdated
-        }
-      : { 
-          entries: data.entries, 
-          accuracy: accuracyArray 
-        };
-
-    const res = NextResponse.json(response);
+    const res = NextResponse.json({ entries: data.entries, accuracy: accuracyArray });
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return res;
   } catch (error) {
