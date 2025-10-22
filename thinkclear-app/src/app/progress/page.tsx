@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TrendingUp, Calendar, Target, Users } from "lucide-react";
+import { TrendingUp, Calendar, Target, Users, RefreshCw } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 
 interface ProgressEntry {
@@ -33,6 +33,19 @@ export default function ProgressPage() {
 
   useEffect(() => {
     loadProgress();
+    
+    // Refresh when page becomes visible (user navigates back)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadProgress();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const loadProgress = () => {
@@ -141,6 +154,13 @@ export default function ProgressPage() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-extrabold text-blue-700 drop-shadow-lg tracking-wide mb-4">Your Progress</h1>
           <p className="text-lg text-blue-500 italic">Track your memory game performance</p>
+          <button
+            onClick={loadProgress}
+            className="mt-4 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full font-semibold transition-colors flex items-center mx-auto"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh Data
+          </button>
         </div>
 
         {!isSignedIn ? (
