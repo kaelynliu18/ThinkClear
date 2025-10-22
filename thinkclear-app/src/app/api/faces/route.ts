@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import { loadFaceMetadata } from '../../../lib/faceStorage';
+import { loadFaceStoreWithVersion, addFace, removeFace, updateFaceRelationship } from '../../../lib/faceStorage';
+import { syncManager } from '../../../lib/syncManager';
 import fs from 'fs';
 import path from 'path';
 
@@ -41,27 +42,91 @@ function loadDefaultFaces() {
   };
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const user = await currentUser();
   const userId = user?.id;
+  const url = new URL(req.url);
+  const includeVersion = url.searchParams.get('includeVersion') === 'true';
 
   if (!userId) {
     const defaultFaces = loadDefaultFaces();
-    const res = NextResponse.json(defaultFaces);
+    const res = NextResponse.json(includeVersion ? { faces: defaultFaces, version: { version: 1, lastModified: new Date().toISOString(), checksum: 'default' } } : defaultFaces);
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return res;
   }
 
   try {
-    const metadata = await loadFaceMetadata(userId);
-    const res = NextResponse.json(metadata);
-    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-    return res;
+    if (includeVersion) {
+      const store = await loadFaceStoreWithVersion(userId);
+      const res = NextResponse.json(store);
+      res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      return res;
+    } else {
+      const store = await loadFaceStoreWithVersion(userId);
+      const res = NextResponse.json(store.faces);
+      res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      return res;
+    }
   } catch (error) {
     console.error('Failed to load faces metadata', error);
     const defaultFaces = loadDefaultFaces();
-    const res = NextResponse.json(defaultFaces);
+    const res = NextResponse.json(includeVersion ? { faces: defaultFaces, version: { version: 1, lastModified: new Date().toISOString(), checksum: 'default' } } : defaultFaces);
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return res;
+  }
+}
+
+export async function POST(req: Request) {
+  const user = await currentUser();
+  const userId = user?.id;
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const { action, name, relationship, imageUrl } = body;
+
+    let version;
+    switch (action) {
+      case 'add':
+        if (!name || !relationship || !imageUrl) {
+          return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+        version = await addFace(userId, name, relationship, imageUrl);
+        await syncManager.notifyFaceUpdate(userId, version, 'add', name);
+        break;
+
+      case 'remove':
+        if (!name) {
+          return NextResponse.json({ error: 'Missing face name' }, { status: 400 });
+        }
+        version = await removeFace(userId, name);
+        await syncManager.notifyFaceUpdate(userId, version, 'delete', name);
+        break;
+
+      case 'update_relationship':
+        if (!name || !relationship) {
+          return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+        version = await updateFaceRelationship(userId, name, relationship);
+        await syncManager.notifyFaceUpdate(userId, version, 'update', name);
+        break;
+
+      default:
+        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      version,
+      message: `Face ${action} successful` 
+    });
+  } catch (error) {
+    console.error('Failed to update face:', error);
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : 'Failed to update face' 
+    }, { status: 500 });
   }
 }
