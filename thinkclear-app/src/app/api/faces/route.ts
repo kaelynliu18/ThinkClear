@@ -42,17 +42,17 @@ function loadDefaultFaces() {
 }
 
 export async function GET() {
-  const user = await currentUser();
-  const userId = user?.id;
-
-  if (!userId) {
-    const defaultFaces = loadDefaultFaces();
-    const res = NextResponse.json(defaultFaces);
-    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-    return res;
-  }
-
   try {
+    const user = await currentUser();
+    const userId = user?.id;
+
+    if (!userId) {
+      const defaultFaces = loadDefaultFaces();
+      const res = NextResponse.json(defaultFaces);
+      res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      return res;
+    }
+
     const metadata = await loadFaceMetadata(userId);
     const res = NextResponse.json(metadata);
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');

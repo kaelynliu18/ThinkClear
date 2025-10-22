@@ -6,6 +6,8 @@ const isPublicRoute = createRouteMatcher([
   '/',
   '/api/faces',
   '/api/progress',
+  '/api/upload',
+  '/api/delete',
   '/faces',
   '/game',
   '/progress',
@@ -14,6 +16,11 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
+  // Skip auth if Clerk is not configured
+  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || !process.env.CLERK_SECRET_KEY) {
+    return;
+  }
+
   if (isPublicRoute(request)) {
     return;
   }

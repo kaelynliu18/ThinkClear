@@ -58,7 +58,15 @@ interface ProgressResponse {
 }
 
 export default function FacesPage() {
-  const { isSignedIn } = useAuth();
+  let isSignedIn = false;
+  
+  try {
+    const auth = useAuth();
+    isSignedIn = auth?.isSignedIn || false;
+  } catch (error) {
+    // Handle missing Clerk configuration gracefully
+    console.warn('Clerk not configured, using guest mode');
+  }
   const [faces, setFaces] = useState<FacesData>({});
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");

@@ -7,7 +7,15 @@ import Image from "next/image";
 import { useAuth } from "@clerk/nextjs";
 
 export default function DashboardPage() {
-  const { isSignedIn } = useAuth();
+  let isSignedIn = false;
+  
+  try {
+    const auth = useAuth();
+    isSignedIn = auth?.isSignedIn || false;
+  } catch (error) {
+    // Handle missing Clerk configuration gracefully
+    console.warn('Clerk not configured, using guest mode');
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-gradient-to-b from-[#e2f0ff] to-[#ffe5f0] p-6 pb-24 text-center">

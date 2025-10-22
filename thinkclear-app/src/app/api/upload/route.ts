@@ -6,12 +6,13 @@ import { put } from '@vercel/blob';
 import { loadFaceMetadata, saveFaceMetadata } from '../../../lib/faceStorage';
 
 export async function POST(req: Request) {
-  const user = await currentUser();
-  const userId = user?.id;
+  try {
+    const user = await currentUser();
+    const userId = user?.id;
 
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
   const formData = await req.formData();
   const file = formData.get('file') as File | null;
@@ -76,5 +77,9 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('Failed to upload face image', error);
     return NextResponse.json({ error: 'Failed to store face image' }, { status: 500 });
+  }
+  } catch (error) {
+    console.error('Upload API error:', error);
+    return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
   }
 }
