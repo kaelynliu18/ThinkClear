@@ -281,11 +281,14 @@ export default function FacesPage() {
       }
 
       const result = await res.json();
+      console.log('Delete result:', result); // Debug log
       
       // Update UI immediately with the returned faces data
       if (result.faces) {
+        console.log('Updating faces with:', result.faces); // Debug log
         setFaces(result.faces);
       } else {
+        console.log('No faces in result, refreshing from server'); // Debug log
         // Fallback: refresh from server
         await refreshFaces();
       }
