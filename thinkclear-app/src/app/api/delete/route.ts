@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import { del } from '@vercel/blob';
-import { loadFaceMetadata, saveFaceMetadata } from '../../../lib/faceStorage';
+import { removeFace } from '../../../lib/faceStorage';
 import { removeProgressForFace } from '../../../lib/progressStorage';
 
 export async function DELETE(req: Request) {
@@ -25,29 +24,23 @@ export async function DELETE(req: Request) {
   }
 
   try {
-    const metadata = await loadFaceMetadata(userId);
-    const entry = metadata[name];
-    if (!entry) {
-      return NextResponse.json({ error: 'Face not found' }, { status: 404 });
-    }
-
-    const imagesToRemove = [...entry.images];
-    delete metadata[name];
-
-    await Promise.all(
-      imagesToRemove.map((url) =>
-        del(url, { token: process.env.BLOB_READ_WRITE_TOKEN }).catch((error) => {
-          console.warn('Failed to delete blob', error);
-        })
-      )
-    );
-
-    await saveFaceMetadata(userId, metadata);
+    // Use the new removeFace function for atomic updates
+    const updatedFaces = await removeFace(userId, name);
+    
+    // Also remove from progress data
     await removeProgressForFace(userId, name);
 
-    return NextResponse.json({ message: 'Delete successful' });
+    return NextResponse.json({ 
+      message: 'Delete successful',
+      faces: updatedFaces // Return the updated faces for immediate UI update
+    });
   } catch (error) {
     console.error('Failed to delete face', error);
+    
+    if (error instanceof Error && error.message.includes('not found')) {
+      return NextResponse.json({ error: 'Face not found' }, { status: 404 });
+    }
+    
     return NextResponse.json({ error: 'Failed to delete face' }, { status: 500 });
   }
 }

@@ -1,6 +1,13 @@
-import { list, put } from '@vercel/blob';
+import { list, put, del } from '@vercel/blob';
 
-export type FaceMetadata = Record<string, { relationship: string; images: string[] }>;
+export interface FaceData {
+  relationship: string;
+  images: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type FaceMetadata = Record<string, FaceData>;
 
 const metadataPathFor = (userId: string) => `faces/${userId}/faces.json`;
 
@@ -49,4 +56,61 @@ export async function saveFaceMetadata(userId: string, data: FaceMetadata) {
     allowOverwrite: true,
     token: process.env.BLOB_READ_WRITE_TOKEN,
   });
+}
+
+export async function addFace(userId: string, name: string, relationship: string, imageUrl: string): Promise<FaceMetadata> {
+  const currentFaces = await loadFaceMetadata(userId);
+  
+  const now = new Date().toISOString();
+  const faceData: FaceData = {
+    relationship,
+    images: [imageUrl],
+    createdAt: now,
+    updatedAt: now
+  };
+
+  if (currentFaces[name]) {
+    // Update existing face
+    currentFaces[name] = {
+      ...currentFaces[name],
+      relationship,
+      images: [imageUrl, ...currentFaces[name].images.filter(url => url !== imageUrl)],
+      updatedAt: now
+    };
+  } else {
+    // Add new face
+    currentFaces[name] = faceData;
+  }
+
+  await saveFaceMetadata(userId, currentFaces);
+  return currentFaces;
+}
+
+export async function removeFace(userId: string, name: string): Promise<FaceMetadata> {
+  const currentFaces = await loadFaceMetadata(userId);
+  
+  if (!currentFaces[name]) {
+    throw new Error(`Face '${name}' not found`);
+  }
+
+  // Delete associated images from blob storage
+  const faceData = currentFaces[name];
+  await Promise.all(
+    faceData.images.map(async (imageUrl) => {
+      try {
+        // Extract blob URL from the full URL
+        const url = new URL(imageUrl);
+        const pathname = url.pathname;
+        await del(pathname, { token: process.env.BLOB_READ_WRITE_TOKEN });
+      } catch (error) {
+        console.warn(`Failed to delete image ${imageUrl}:`, error);
+      }
+    })
+  );
+
+  // Remove from metadata
+  delete currentFaces[name];
+  
+  await saveFaceMetadata(userId, currentFaces);
+  return currentFaces;
 }

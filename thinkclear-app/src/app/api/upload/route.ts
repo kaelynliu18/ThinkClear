@@ -3,7 +3,7 @@ import sharp from 'sharp';
 import heicConvert from 'heic-convert';
 import { currentUser } from '@clerk/nextjs/server';
 import { put } from '@vercel/blob';
-import { loadFaceMetadata, saveFaceMetadata } from '../../../lib/faceStorage';
+import { addFace } from '../../../lib/faceStorage';
 
 export async function POST(req: Request) {
   try {
@@ -57,14 +57,8 @@ export async function POST(req: Request) {
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
 
-    const metadata = await loadFaceMetadata(userId);
-    if (!metadata[name]) {
-      metadata[name] = { relationship, images: [] };
-    }
-    metadata[name].relationship = relationship;
-    metadata[name].images = [url, ...metadata[name].images.filter((existing) => existing !== url)];
-
-    await saveFaceMetadata(userId, metadata);
+    // Use the new addFace function for atomic updates
+    const updatedFaces = await addFace(userId, name, relationship, url);
 
     return NextResponse.json({
       message: 'Upload successful',
@@ -73,6 +67,7 @@ export async function POST(req: Request) {
         relationship,
         imageUrl: url,
       },
+      faces: updatedFaces, // Return the updated faces for immediate UI update
     });
   } catch (error) {
     console.error('Failed to upload face image', error);

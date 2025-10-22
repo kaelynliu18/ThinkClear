@@ -75,8 +75,6 @@ export default function FacesPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState("Processing your update...");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [imageForCropping, setImageForCropping] = useState<string | null>(null);
@@ -129,38 +127,13 @@ export default function FacesPage() {
     }
   };
 
-  const waitForFaceStatus = async (faceName: string, imageUrl: string, expectPresent: boolean) => {
-    const target = faceName.trim().toLowerCase();
-    const maxAttempts = expectPresent ? 12 : 8;
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const [facesData, progressData] = await Promise.all([fetchFacesData(), fetchProgressData()]);
-
-      if (Object.keys(facesData).length > 0) {
-        setFaces(facesData);
-      }
-
-      const entry = facesData?.[faceName];
-      const facePresent = !!entry && (!imageUrl || entry.images.includes(imageUrl));
-
-      const labels = (progressData.accuracy ?? []).map((item) => item.label.trim().toLowerCase());
-      const progressPresent = labels.includes(target);
-
-      if ((expectPresent && facePresent && progressPresent) || (!expectPresent && !facePresent && !progressPresent)) {
-        return true;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 800));
-    }
-    return false;
-  };
-  const refreshDependentData = async () => {
+  // Simple refresh function - no complex polling
+  const refreshFaces = async () => {
     try {
-      await Promise.all([
-        fetch("/api/faces", { cache: "no-store" }).catch(() => undefined),
-        fetch("/api/progress", { cache: "no-store", credentials: "include" }).catch(() => undefined),
-      ]);
-    } catch (err) {
-      console.warn("Failed to refresh related data", err);
+      const data = await fetchFacesData();
+      setFaces(data);
+    } catch (error) {
+      console.error('Failed to refresh faces:', error);
     }
   };
 
@@ -287,12 +260,12 @@ export default function FacesPage() {
     };
   }, [previewUrl]);
 
-  // Add a function to handle deleting a face
-  const handleDelete = async (person: string, image: string) => {
+  // Simplified delete function
+  const handleDelete = async (person: string) => {
     if (!confirm(`Delete ${person}?`)) return;
 
-    setSyncMessage("Deleting face...");
-    setSyncing(true);
+    setLoading(true);
+    setError("");
 
     try {
       const res = await fetch("/api/delete", {
@@ -301,23 +274,26 @@ export default function FacesPage() {
         credentials: 'include',
         body: JSON.stringify({ name: person }),
       });
-      if (!res.ok) throw new Error("Failed to delete");
-
-      const fullyCleared = await waitForFaceStatus(person, "", false);
-      setSyncMessage(fullyCleared ? "Cleaning up..." : "Finishing up cleanup…");
-
-      await refreshDependentData();
-      const data = await loadFaces();
-
-      if (!data[person]) {
-        setFaces(data);
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to delete");
       }
 
-      setTimeout(() => setSyncing(false), fullyCleared ? 800 : 1400);
-    } catch (err) {
+      const result = await res.json();
+      
+      // Update UI immediately with the returned faces data
+      if (result.faces) {
+        setFaces(result.faces);
+      } else {
+        // Fallback: refresh from server
+        await refreshFaces();
+      }
+    } catch (err: any) {
       console.error("Failed to delete face", err);
-      setSyncMessage("Delete failed. Please refresh and try again.");
-      setTimeout(() => setSyncing(false), 2000);
+      setError(err.message || "Failed to delete face");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -345,10 +321,19 @@ export default function FacesPage() {
         credentials: 'include',
         body: formData,
       });
+      
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Upload failed");
 
-      // success → close modal and reset
+      // Update UI immediately with the returned faces data
+      if (json.faces) {
+        setFaces(json.faces);
+      } else {
+        // Fallback: refresh from server
+        await refreshFaces();
+      }
+
+      // Close modal and reset
       setShowModal(false);
       setName("");
       setRelationship("");
@@ -362,35 +347,9 @@ export default function FacesPage() {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-
-      setSyncMessage("Processing your update...");
-      setSyncing(true);
-
-      const expectedName = (json.face?.name as string | undefined) ?? name;
-      const expectedUrl = (json.face?.imageUrl as string | undefined) ?? "";
-
-      await refreshDependentData();
-
-      const fullySynced = await waitForFaceStatus(expectedName, expectedUrl, true);
-
-      if (json.face) {
-        const uploadedFace = json.face as { name: string; relationship: string; imageUrl: string };
-        setFaces((prev) => ({
-          ...prev,
-          [uploadedFace.name]: {
-            relationship: uploadedFace.relationship,
-            images: [uploadedFace.imageUrl, ...(prev[uploadedFace.name]?.images ?? [])],
-          },
-        }));
-      }
-
-      setSyncMessage(fullySynced ? 'Wrapping up...' : 'Almost there…');
-      await loadFaces();
-      setTimeout(() => setSyncing(false), fullySynced ? 600 : 1000);
     } catch (err: any) {
-      setError(err.message);
-      setSyncMessage("Something went wrong. Please try refreshing.");
-      setTimeout(() => setSyncing(false), 2000);
+      console.error("Upload failed:", err);
+      setError(err.message || "Upload failed");
     } finally {
       setLoading(false);
     }
@@ -447,15 +406,6 @@ export default function FacesPage() {
           </div>
         </div>
       )}
-      {syncing && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-white/80 backdrop-blur">
-          <div className="bg-white rounded-2xl shadow-2xl px-8 py-6 text-center">
-            <div className="animate-spin h-10 w-10 border-4 border-blue-200 border-t-blue-500 rounded-full mx-auto mb-4"></div>
-            <p className="text-blue-600 font-semibold">{syncMessage}</p>
-            <p className="text-sm text-blue-400">This can take a few seconds.</p>
-          </div>
-        </div>
-      )}
       <div className="flex flex-col items-center mb-8">
         <h1 className="text-4xl font-extrabold text-blue-700 drop-shadow-lg tracking-wide mb-4">Faces Gallery</h1>
         {isSignedIn ? (
@@ -492,7 +442,7 @@ export default function FacesPage() {
                 <button
                   className="absolute top-3 right-3 text-red-400 hover:text-red-600 bg-white/80 rounded-full p-1 shadow"
                   title="Delete face"
-                  onClick={() => handleDelete(person, images[0])}
+                  onClick={() => handleDelete(person)}
                 >
                   <Trash2 size={20} />
                 </button>
