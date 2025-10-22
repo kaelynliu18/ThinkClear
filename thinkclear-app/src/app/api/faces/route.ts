@@ -16,27 +16,38 @@ function loadDefaultFaces() {
     console.error('Failed to load default faces:', error);
   }
   
-  // Fallback to hardcoded data
+  // Fallback to hardcoded data with new structure
+  const now = new Date().toISOString();
   return {
     "Hangyl": {
       "relationship": "Co-founder & CEO",
-      "images": ["Hangyl-1752811845862.png"]
+      "images": ["Hangyl-1752811845862.png"],
+      "createdAt": now,
+      "updatedAt": now
     },
     "Isaac": {
       "relationship": "Co-founder & CTO", 
-      "images": ["isaac_1752987515197.jpg"]
+      "images": ["isaac_1752987515197.jpg"],
+      "createdAt": now,
+      "updatedAt": now
     },
     "Kaelyn": {
       "relationship": "Co-founder & Head of Design",
-      "images": ["kaelyn_1752939468706.jpg"]
+      "images": ["kaelyn_1752939468706.jpg"],
+      "createdAt": now,
+      "updatedAt": now
     },
     "Tanuj": {
       "relationship": "Co-founder & Head of Product",
-      "images": ["Tanuj-1752812456575.png"]
+      "images": ["Tanuj-1752812456575.png"],
+      "createdAt": now,
+      "updatedAt": now
     },
     "Vedant": {
       "relationship": "Co-founder & Head of Engineering",
-      "images": ["vedant_1752839826214.jpg"]
+      "images": ["vedant_1752839826214.jpg"],
+      "createdAt": now,
+      "updatedAt": now
     }
   };
 }

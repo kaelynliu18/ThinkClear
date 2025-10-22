@@ -1,22 +1,32 @@
 {
   "Hangyul": {
     "relationship": "Head of Hardware & Prototyping",
-    "images": ["hangyul.png"]
+    "images": ["hangyul.png"],
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
   },
   "Isaac": {
     "relationship": "Operations & Systems Lead", 
-    "images": ["isaac.png"]
+    "images": ["isaac.png"],
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
   },
   "Kaelyn": {
     "relationship": "Lead AI Engineer",
-    "images": ["kaelyn.png"]
+    "images": ["kaelyn.png"],
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
   },
   "Tanuj": {
     "relationship": "Full-Stack & Web Lead",
-    "images": ["tanuj.png"]
+    "images": ["tanuj.png"],
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
   },
   "Vedant": {
     "relationship": "Marketing & Partnerships Lead",
-    "images": ["vedant.png"]
+    "images": ["vedant.png"],
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
   }
 }

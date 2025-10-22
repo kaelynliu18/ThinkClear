@@ -9,6 +9,8 @@ import { useAuth } from "@clerk/nextjs";
 interface FaceData {
   relationship: string;
   images: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 type PeopleData = Record<string, FaceData>;
