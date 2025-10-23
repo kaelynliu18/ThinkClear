@@ -75,6 +75,7 @@ export default function FacesPage() {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState("");
   const [initialLoading, setInitialLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropModalOpen, setCropModalOpen] = useState(false);
@@ -267,6 +268,7 @@ export default function FacesPage() {
 
     setLoading(true);
     setError("");
+    setSuccess("");
 
     try {
       const res = await fetch("/api/delete", {
@@ -290,6 +292,10 @@ export default function FacesPage() {
         // Fallback: refresh from server
         await refreshFaces();
       }
+      
+      // Show success message
+      setSuccess(`${person} deleted successfully!`);
+      setTimeout(() => setSuccess(""), 4000);
     } catch (err: any) {
       console.error("Failed to delete face", err);
       setError(err.message || "Failed to delete face");
@@ -301,6 +307,7 @@ export default function FacesPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     if (!name.trim() || !relationship.trim()) {
       setError("All fields are required.");
       return;
@@ -333,6 +340,10 @@ export default function FacesPage() {
         // Fallback: refresh from server
         await refreshFaces();
       }
+
+      // Show success message
+      setSuccess(`${name} added successfully!`);
+      setTimeout(() => setSuccess(""), 4000);
 
       // Close modal and reset
       setShowModal(false);
@@ -422,6 +433,10 @@ export default function FacesPage() {
           </p>
         )}
         </div>
+
+        {/* Success/Error Messages */}
+        {error && <p className="text-red-600 text-center mb-4 font-semibold">{error}</p>}
+        {success && <p className="text-green-600 text-center mb-4 font-semibold">{success}</p>}
 
         {/* Gallery grid */}
         {initialLoading ? (
@@ -532,6 +547,7 @@ export default function FacesPage() {
               </div>
 
               {error && <p className="text-red-600 text-center">{error}</p>}
+              {success && <p className="text-green-600 text-center font-semibold">{success}</p>}
 
               <div className="flex justify-end space-x-2">
                 <button

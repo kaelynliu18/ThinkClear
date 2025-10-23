@@ -66,7 +66,7 @@ export default function JournalPage() {
           if (result && !result.error) {
             setEntry('');
             setSaved(true);
-            setTimeout(() => setSaved(false), 2000);
+            setTimeout(() => setSaved(false), 4000);
             if (result.entry) {
               setPastEntries((prev) => [
                 {
@@ -92,6 +92,10 @@ export default function JournalPage() {
   };
 
   const deleteEntry = (id: string) => {
+    if (!confirm('Are you sure you want to delete this journal entry?')) {
+      return;
+    }
+
     fetch('/api/journal', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -106,7 +110,7 @@ export default function JournalPage() {
       })
       .catch((error) => {
         console.error('Failed to delete journal entry', error);
-        alert('Failed to delete entry.');
+        alert('Failed to delete entry. Please try again.');
       });
   };
 
